@@ -1,0 +1,717 @@
+上一章提到过if else的所有处理策略，似乎if else的逻辑永远无法消灭，只能转移，要么到上游、下游，要么转移到map中。
+确实如此，但是现实中经常会出现一些伪if else。之所以称为伪if else，是因为他们是可以完全消灭的。比如：
+
+```
+// type的取值范围为1到3
+public int test(int type) {
+    if (type == 1) {
+        return 1;
+    } else if (type == 2) {
+        return 2;
+    } else {
+        return 3;
+    }
+}
+
+// 因为type的取值范围是1~3，所以这段代码完全可以改成这样：
+
+public int test(int type) {
+    return type;
+}
+```
+
+看起来很愚蠢，似乎不会有人写出这种代码，这个函数压根就没有存在的必要。可是实际上我们很可能犯过这种类似的错误：
+
+```
+public class A {
+
+    public List<User> test(String type) {
+        if ("admin".equals(type)) {
+            return selectAdminUser();
+        } else if ("audit".equals(type)){
+            return selectAuditUser();
+        } else {
+            return selectNormalUser();
+        }
+    }
+
+    private List<User> selectAdminUser() {
+        String sql = "select * from user where type = 1";
+        return excuteSql(sql);
+    }
+    private List<User> selectAuditUser() {
+        String sql = "select * from user where type = 2";
+        return excuteSql(sql);
+    }
+
+    private List<User> selectNormalUser() {
+        String sql = "select * from user where type = 0";
+        return excuteSql(sql);
+    }
+}
+```
+
+这个例子和上面的“愚蠢代码”并没有什么本质区别，他只是让其中的“愚蠢逻辑”看起来要隐蔽一些。我们完全可以让调用者改变传参，将type改成int常量值或枚举即可。
+
+```
+public enum RoleType {
+    ADMIN(1), AUDIT(2), NORMAL(3);
+
+    public int value;
+
+    private RoleType(int value) {
+        this.value = value;
+    }
+}
+
+public class A {
+
+    public List<User> test(RoleType type) {
+        return selectUser(type.value);
+    }
+
+    private List<User> selectUser(int type) {
+        String sql = "select * from user where type = " + type;
+        return excuteSql(sql);
+    }
+
+}
+```
+
+这些伪if else的分支实质上是同样的东西，识别他们也看起来非常简单，随便一个程序员似乎不需要经过什么思考就能知道如何将这三个函数合起来。
+
+但如果细想一下我们是如何将这三个雷同的函数合并成一个的，会发现有很多值得学习的地方：
+
+我们先分析下三个函数分别在做什么：
+- selectAdminUser：查询所有的管理员用户；
+- selectAuditUser：查询所有的审计用户；
+- selectNormalUser：查询所有的普通用户；
+因为他们做的是不一样的事情，所以无法共用，而且未来一旦增加了新的用户类型，我们还会增加新的函数。
+但他们又并非完全不同，只是小部分不一样而已。如果我们将这些不同的点（即个性）罗列出来，并抽象为一个公用的概念，来兼容所有的场景，即：
+管理员，审计，普通 -> 用户类型
+那么最终可以把它们合并为：查询所有的某种用户类型的用户。
+将这个新抽象的概念作为参数剥离出去，便可以将三个函数合并为一个共用函数了。
+```
+private List<User> selectUser(int type) {
+    String sql = "select * from user where type = " + type;
+    return excuteSql(sql);
+}
+```
+
+我将上面这种通过抽象将多个函数合并为一个共用的过程称之为“参数化”。“参数化”只是一个名字而已，读者可以自行理解为自己心中的概念即可。
+
+
+### 1. 参数化
+一个有效的参数化，往往可以为我们节省大量的代码并带来极高的扩展性。
+其核心步骤便是准确识别出引起代码重复的变化因子，接着将这些变化因子进行分离，达到两者互不影响单独复用的目的。
+
+有些情况下，我们可以非常容易识别这些变化因子，但有时候会变得不那么容易，比如：
+```
+public void method1() {
+    a();
+    a();
+    a();
+    b();
+    c();
+}
+
+public void method2() {
+    a();
+    a();
+    b();
+    b();
+    c();
+    c();
+    c();
+}
+
+public void method3() {
+    b();
+    c();
+}
+
+//... 还有很多method都是类似，而且随着需求变更，还需要增加更多的类似函数
+
+```
+
+上面这些函数在某种情况下可以合并成这样：
+
+```
+public void method(int aNum, int bNum, int cNum) {
+    for (int i = 0; i < aNum; i++) {
+        a();
+    }
+    for (int i = 0; i < bNum; i++) {
+        b();
+    }
+    for (int i = 0; i < cNum; i++) {
+        c();
+    }
+}
+// 之前调用method1、method2和method3的地方则改为：
+// method(3, 1, 1)、method(2, 2, 3)和method(0, 1, 1)
+```
+
+参数化最难的场景往往是多个变化因子互相搅合，而且这些变化因子并不是诸如String、int等一眼就能发现的基本变量。
+```
+/** 
+ * 肯德基有三种套餐：套餐1：薯条+鸡翅+可乐  套餐2：汉堡+可乐  套餐3：鸡翅+汉堡
+ * 上餐方式有三种：1. 堂食，直接装盘由服务员端送  2. 自取，使用打包带装起来，然后叫号
+ */
+public interface Food {
+}
+
+// 假想以下方法都是随处可调的工具类方法-------------------------------
+public Food createFries() {
+	// 生产薯条
+}
+
+public Food createChickenWing() {
+	// 生产鸡翅
+}
+
+public Food createHamburg() {
+	// 生产汉堡
+}
+
+public Food createCola() {
+	// 生产可乐
+}
+
+public void callWaiter() {
+	// 呼叫服务员
+}
+
+public void callCustomerNo() {
+	// 语音广播客户号取餐
+}
+// ---------------------------------------
+
+// 处理套餐1堂食的订单 
+public void createDineInPack1() {
+	putFood2Plate(createFries());
+	putFood2Plate(createChickenWing());
+	putFood2Plate(createCola());
+	callWaiter();
+}
+
+// 处理套餐1自取的订单 
+public void createDiyPack1() {
+	putFood2PackingBag(createFries());
+	putFood2PackingBag(createChickenWing());
+	putFood2PackingBag(createCola());
+	callCustomerNo();
+}
+
+// 处理套餐2堂食的订单 
+public void createDineInPack2() {
+	putFood2Plate(createHamburg());
+	putFood2Plate(createCola());
+	callWaiter();
+}
+
+// 处理套餐2自取的订单 
+public void createDiyPack2() {
+	putFood2PackingBag(createHamburg());
+	putFood2PackingBag(createCola());
+	callCustomerNo();
+}
+
+// 处理套餐3堂食的订单 
+public void createDineInPack3() {
+	putFood2Plate(createChickenWing());
+	putFood2Plate(createHamburg());
+	callWaiter();
+}
+
+// 处理套餐3自取的订单 
+public void createDiyPack3() {
+	putFood2PackingBag(createChickenWing());
+	putFood2PackingBag(createHamburg());
+	callCustomerNo();
+}
+
+```
+
+试想一下，如果我们增加一种套餐，则需要增加两个方法；如果增加一种配送方式，则需要增加几个方法。如果配送方式和套餐的数量都多了起来，这个代码会陷入无法维护的地步。
+如果只依靠简单的抽象进行参数化，比如抽取一个套餐类型和打包方式两个参数，会发现代码变成如下：
+
+```
+/**
+ * 处理订单
+ * type代表套餐编号
+ * mode代表配送方式：1代表堂食，2代表自取
+ */ 
+public void createPack(int type, int mode) {
+	if (mode == 1) {
+		if (type == 1) {
+			putFood2Plate(createFries());
+			putFood2Plate(createChickenWing());
+			putFood2Plate(createCola());
+		} else if (type == 2) {
+			putFood2Plate(createHamburg());
+			putFood2Plate(createCola());
+		} else if (type == 3) {
+			putFood2Plate(createChickenWing());
+			putFood2Plate(createHamburg());
+		}
+		callWaiter();
+	} else if (mode == 2) {
+		if (type == 1) {
+			putFood2PackingBag(createFries());
+			putFood2PackingBag(createChickenWing());
+			putFood2PackingBag(createCola());
+		} else if (type == 2) {
+			putFood2PackingBag(createHamburg());
+			putFood2PackingBag(createCola());
+		} else if (type == 3) {
+			putFood2PackingBag(createChickenWing());
+			putFood2PackingBag(createHamburg());
+		}
+		callCustomerNo();
+	}
+}
+
+```
+这确实是一种参数化，将多个函数合成了一个，但却并不是有效的参数化。
+最终代码并没有太多精简，我们仅仅是将多个方法变成了一个函数的多个分支。每增加一种配送方式或套餐，代码依然需要增加很多分支，数量多了之后依然会成为噩梦。
+正确的做法需要将两个变化因子进行隔离：
+```
+/**
+ * 处理订单
+ * type代表套餐编号
+ * mode代表配送方式：1代表堂食，2代表自取
+ */ 
+public void createPack(int type, int mode) {
+	List<Food> foods = createFoods(type);
+	package(mode, foods);
+}
+
+private void package(int mode, List<Food> foods) {
+	if (mode == 1) {
+		for (Food food : foods) {
+			putFood2Plate(food);
+		}
+		callWaiter();
+	} else if (mode == 2) {
+		for (Food food : foods) {
+			putFood2PackingBag(food);
+		}
+		callCustomerNo();
+	}
+}
+
+private List<Food> createFoods(int type) {
+	List<Food> list = new ArrayList<>();
+	if (type == 1) {
+		list.add(createFries());
+		list.add(createChickenWing());
+		list.add(createCola());
+	} else if (type == 2) {
+		list.add(createHamburg());
+		list.add(createCola());
+	} else if (type == 3) {
+		list.add(createChickenWing());
+		list.add(createHamburg());
+	}
+	return list;
+}
+
+```
+
+这种新的写法明显会简单很多，增加一种配送方式，或增加一种套餐，都只需要增加一个逻辑分支即可。
+当然，上面的代码有多种写法，但只要抽象对了，最终代码的复杂度一定会降下来。
+
+> 上面的代码其实可以再进一步抽象，进行参数化，可以变得更为简单，有兴趣的读者可以自行思考一下。
+
+我这里有一些基本步骤，可以作为新手如何进行有效参数化的基础指导，最终的实际效果可能会因人而异：
+1. 挑选足够多的当前场景和未来可能发生的场景，尽量将他们以相似而且一致的方式描述出来：
+2. 挑选两个场景，识别两者的个性（即不同之处，或变化因子）：
+如果个性就是场景本身（所有的地方都不一样，完全没有相同之处），那么试着寻找一种更好的方式重新描述这些场景并重新开始。如果始终找不到相同点，那么我们可以做一些选择：
+- 放弃抽象：试着考虑是否有抽象的必要
+- 进行顶级抽象：java中对象的顶级抽象是Object，行为的顶级抽象是类似于action，call，run等之类的函数
+3. 试着将这些个性抽象为同一个概念或同一种说法，可以使用这些新的概念或说法重新描述之前的两个场景，让它们合二为一，然后使用新的场景描述替换之前的两种场景。
+5. 回到第2步不断迭代，直至只有一个场景。
+6. 最终产生的那些新的概念，便是我们想要的抽象，将其作为参数剥离出去即可。
+
+当然，也不用完全生搬硬套上面的过程。并不是每次一定只能挑选两种场景，而且，有些时候会同时存在多个变化因子，我们可以根据实际情况自行适当调整。
+
+有必要再次说明一下，抽象的最终体现并不一定要是接口或者抽象类，也可以是一个很具体的类。它只是一个相对的概念，int相对于1、2、3这些具体的数值，就是一个更高的抽象。
+
+
+> 2.1开闭原则中的代码片段2.1.1中的两个函数，以及单一职责原则中关于复用的例子，其实都是参数化的表现。实际工作中，有些人写的代码总感觉重复率高，不够优雅，不易维护，而有些优秀的程序员的代码则干净利落。其实本质上是因为对设计的理解已经出现了高低差别。我见过很多优秀的程序员，从未看过设计模式和设计原则，但是他们早已在骨子里认同了这些理念，只是不自知而已。
+
+
+
+参数化很多情况下仅仅是为了共用代码，并不是解耦、隔离变化之类等高大上的原因。所以判断是否参数化，最主要的一个考虑因素就是：参数化后能节省多少代码量（这里的代码量还包括未来预期需求变化后可能节省的代码量）。
+
+所以，当我们在犹豫是否应该参数化时，大可不必，保持现状即可。之所以犹豫不决，往往是因为参数化带来的收益本身就不太大，再加上参数化本身就需要花费一些额外改造工作量，最终算下来可能节省的时间还不有我们犹豫所花费的时间多，所以不如等等再看。
+比如下面两个函数：
+```
+public class B {
+    private int a = 0;
+
+    public int method1() {
+        return this.a + 1;
+    }
+
+    public int method2() {
+        return this.a + 2;
+    }
+
+}
+
+// 通过参数化可以合并为：
+
+public class B {
+    private int a = 0;
+
+    public int method(int value) {
+        return this.a + value;
+    }
+
+}
+```
+
+假设有上百处调用method1和method2的地方，而且a+1和a+2是具有特殊业务含义的一个操作，未来也不可能出现+3，+4等其他情况，这里强行将method1和method2合并并不会有多大好处，反而你要修改所有调用这两个函数的旧代码。
+
+参数化会修改函数并增加参数，一定会引起所有调用方的修改。所以如果需要参数化的代码，应该尽早识别，尽量避免后期整改；
+参数化不能随便滥用，将两个毫不相干的函数合并只会适得其反；
+
+
+
+#### 2. 反参数化
+反参数化顾名思义，就是参数化的逆操作。有时候为了某种设计上的隔离，我们会将一些无效的参数化进行反参数化。比如
+
+```
+public void method(boolean b) {
+    if (b) {
+        // code block 1
+    } else {
+        // code block 2
+    }
+}
+// 拆成两个函数
+public void method1() {
+    // code block 1
+}
+
+public void method2() {
+    // code block 2
+}
+```
+
+处理反参数化的方式非常简单，就是拆开。这和我们平时所说的大函数不一样，大函数往往是因为业务依赖拼接多了多个代码块；而需要反参数化的函数则是因为某个参数合并在了一起。前者拆开后原函数依然存在，新函数的业务逻辑依然相互依赖，而且调用方不感知；后者拆开后原函数会删除，新函数则变得毫无关系，所有调用方都需要修改。
+
+大函数的拆解：
+```
+public void method() {
+    // code block 1
+    // code block 2
+}
+// 扩展出两个子函数
+public void method() {
+    method1();
+    method2();
+}
+
+private void method1() {
+    // code block 1
+}
+
+private void method2() {
+    // code block 2
+}
+	
+```
+
+反参数化最常见几个场景。
+1. 将if else逻辑转移到上游（参看2.5 依赖关系的解耦 2.1小节）。
+比如将两个毫不相干的函数合并到了一块，像之前提到的将HashMap的get和put函数合并到一起的例子，所有调用方都非常明确自己是要get还是put的情况下（这种情况下if else逻辑上移后不会产生新的if else），这种合并明显是多余而且极其不合理的。
+
+2. 有些情况，仅仅是想将多个分支隔离开，起到隔离的效果。
+比如上面参数化中肯德基送餐的例子，我们可以对最后分解出来的package和createFoods两个函数分别进行反参数化：将if else分解为多个函数，并通过BA转换上升到类的层次。
+```
+public interface PackFactory {
+	List<Food> createFoods();
+}
+
+public class PackFactory1 implements PackFactory {
+	@Override
+	public List<Food> createFoods() {
+		List<Food> list = new ArrayList<>();
+		list.add(createFries());
+		list.add(createChickenWing());
+		list.add(createCola());
+		return list;
+	}
+}
+
+public class PackFactory2 implements PackFactory {
+	@Override
+	public List<Food> createFoods() {
+		List<Food> list = new ArrayList<>();
+		list.add(createHamburg());
+		list.add(createCola());
+		return list;
+	}
+}
+
+public class PackFactory3 implements PackFactory {
+	@Override
+	public List<Food> createFoods() {
+		List<Food> list = new ArrayList<>();
+		list.add(createChickenWing());
+		list.add(createHamburg());
+		return list;
+	}
+}
+
+public interface DeliverMode {
+	void deliver(List<Food>);
+}
+
+public class DineInMode implements DeliverMode {
+	@Override
+	public void deliver(List<Food> foods) {
+		for (Food food : foods) {
+			putFood2Plate(food);
+		}
+		callWaiter();
+	}
+}
+
+public class DiyMode implements DeliverMode {
+	@Override
+	public void deliver(List<Food> foods) {
+		for (Food food : foods) {
+			putFood2PackingBag(food);
+		}
+		callCustomerNo();
+	}
+}
+
+// 调用的地方则改成：
+/**
+ * 处理订单
+ * packFactory:生产套餐的工厂
+ * mode代表配送方式
+ */
+public void createPack(PackFactory packFactory, DeliverMode mode) {
+	List<Food> foods = packFactory.createFoods();
+	mode.deliver(foods);
+}
+```
+
+这种新的做法相比原来的方式并不会节省代码（反而会多那么一些，但几乎可以忽略），但是可以在增加新的方式时会比较独立，不会对其他逻辑搅合在一起，这是反参数化最常见的一种使用形式。
+在后面的设计模式中，经常会用到这种方式，即先参数化分离两个变化因子，再将两个变化因子单独进行反参数化和BA转换，这整个过程，我称之为“**抽象参数化**”
+
+### 3. 扩展
+之前我们说过，任何两个事物都可以抽象到同一个概念上来。所以理论上讲：
+- 任何两个不同的函数，都可以通过参数化合并成一个函数；
+- 反之，任何一个带有参数的函数，都可以将其分解成若干个（无数个）去掉该参数的函数。
+只是是否必要而已。
+
+比如，我非要将HashMap的get和put函数合并：
+```
+public V get(Object key) {
+    Node<K,V> e;
+    return (e = getNode(hash(key), key)) == null ? null : e.value;
+}
+
+public V put(K key, V value) {
+    return putVal(hash(key), key, value, false, true);
+}
+
+// 合并为：
+public V getOrPut(boolean isGet, Object key, K key1, V value) {
+    if (isGet) {
+	    Node<K,V> e;
+        return (e = getNode(hash(key), key)) == null ? null : e.value;
+	} else {
+	    return putVal(hash(key1), key1, value, false, true);
+	}
+}
+```
+然后我又非要把ArrayList的get函数反参数化，一个函数可能要变成无数个了：
+```
+public E get(int index) {
+    rangeCheck(index);
+    return elementData(index);
+}
+改为：
+public V get0() {
+    rangeCheck(0);
+    return elementData(0);
+}
+
+public V get1() {
+    rangeCheck(1);
+    return elementData(1);
+}
+
+// 还有无数个get函数
+```
+
+
+
+参数化和反参数化并不局限于函数，还有类和模块。
+
+对于类而言，成员变量也可以成为参数；
+对于模块而言，配置文件、一个动态组件都可以成为参数；
+
+
+所以：
+任何两个相同接口的实现类，都可以通过增加成员属性或参数合并成一个类；
+反之，任何带有属性的类，都可以拆分成若干个不带有该属性或参数而继承于同一个接口的类。
+
+举个简单的例子：
+```
+public interface C {
+    void selectUser();
+}
+
+public class A1 implements C {
+    @Override
+    public void selectUser() {
+        String sql = "select * from user where type = 3";
+        // same code
+    }
+}
+
+public class A2 implements C {
+    @Override
+    public void selectUser() {
+        String sql = "select * from user where type = 2";
+        // same code
+    }
+}
+
+```
+我们可以将A1和A2合并，方式一是给函数增加一个参数，这和上面所讲到的函数参数化方式基本一样：
+```
+public interface C {
+    void selectUser(int type);
+}
+
+public class A implements C {
+    @Override
+    public void selectUser(int type) {
+        String sql = "select * from user where type = " + type;
+        // same code
+    }
+}
+
+```
+
+方式二则是通过成员变量，其实也差不多：
+```
+public interface C {
+    void selectUser(int type);
+}
+
+public class A implements C {
+    private int type;
+    
+    public A(int type) {
+        this.type = type;
+    }
+    
+    @Override
+    public void selectUser() {
+        String sql = "select * from user where type = " + type;
+        // same code
+    }
+}
+
+```
+
+很多时候我们为了避免类泛滥，会将类进行参数化。有时候一个类的逻辑过于复杂，也会进行反参数化。具体逻辑与函数的参数化和反参数化雷同，不再赘述。
+
+参数化在模块级的应用：
+经常当一个项目出现一种新的交付场景时，我们会简单粗暴的拷贝一份原有工程的代码，经过一段时间后，最终变成多份雷同但又不同的代码，导致经常修改一个bug需要重复修改多份，一个特性也需要在各个代码分支中同步多次。如果使用参数化的思想，一开始就应该把不同交付场景的个性抽取出来，做成可配参数，让多个工程共用一份代码。
+而对于一些配置文件无法实现的差异点，比如有很大一段逻辑完全不一样，则应该使用组件参数化的方式（使用BA转换将具体实现下放到各自项目工程中，在启动时动态注册进去）。拿函数举例则是这样：
+```
+public class A {
+
+    public void test1() {
+       // 项目1的逻辑
+    }
+	
+	public void test2() {
+		// 项目1的逻辑
+	}
+	
+	public void test3() {
+		// 项目3的逻辑
+	}
+}
+```
+
+通过简单参数化可以变成：
+```
+public class A {
+	public int scene = ...;
+	
+    public void test() {
+        if (scene == 交付场景1) {
+            // 项目1的逻辑
+        } else if (scene == 交付场景2) {
+            // 项目2的逻辑
+        } else if (scene == 交付场景3) {
+            // 项目3的逻辑
+        }
+    }
+}
+```
+
+但这种方式不太有效，而且会导致公共模块依赖下层的业务模块。正确的方式应该是将不同场景的处理抽象为一个逻辑组件：
+
+```
+public class A {
+    private AProxy proxy;
+	
+    public void test() {
+        proxy.doYouSelf();
+    }
+	
+	public void registerProxy(AProxy proxy) {
+        this.proxy = proxy;
+    }
+}
+
+public interface AProxy {
+    void doYouSelf();
+}
+
+public class AProxy1 {
+    public void doYouSelf() {
+        // 项目1的逻辑
+    }
+}
+
+public class AProxy2 {
+    public void doYouSelf() {
+        // 项目2的逻辑
+    }
+}
+
+public class AProxy3 {
+    public void doYouSelf() {
+        // 项目3的逻辑
+    }
+}
+```
+这种方法最终是删除掉全局配置参数SCENE，通过业务系统启动时，将各个项目组自行实现的AProxy注入到公共模块A中即可（交付场景1则加载项目组1的插件，交付场景2则加载项目组2的插件，这里如果使用了spring的自动注入将会更加方便）。
+
+通过配置文件和组件参数化两种方式，几乎可以让任何两个工程可共用的地方达到共用。实际工作中拷贝复制的项目大都可以通过此种方式做到代码归一，但对于差异过大或业务发展方向差别很大的两个项目，则同样需要考虑参数化最终带来的性价比。有时候成千上万的配置参数也会成为另一种噩梦，为了一层很薄的复用而下放大量业务逻辑也不一定划算。
+
+#### 4. 总结
+参数化和反参数化并不是多么高明的设计技巧，但是却是非常实用的技术手段，经常能为我们节省大量重复代码。
+
+参数化和反参数化由于会增加或删除参数，会引起所有调用方的变化。
+参数化主要解决“同而不合”的问题：即两个明明是相同的东西，却要分开写；需要通过参数化合起来；
+反参数化主要解决“合而不同”的问题：即明明是两个不相干的东西，却写在了一块通过参数对外体现为一个整体；需要通过反参数化分开；
+
+// TODO 
+多个具体都可以合并为一个抽象，一个抽象也可以转为多个具体，这取决于业务是否关心细节

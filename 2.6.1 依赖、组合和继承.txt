@@ -1,0 +1,271 @@
+在单一职责原则中我们讨论了将复杂的事务分解为多个一；在依赖倒置原则中又主要讨论了如何处理两个对象之间的直接代码依赖。
+无论使用何种设计手段，最终一个复杂的业务一定是由多个对象互相调用合作完成的，不管最终调用的是一个抽象接口，亦或是一个具体类的某个方法，这种业务上的调用依赖一定以某种形式存在，最终体现为类与类之间的某种组成关系。
+而在本章我们就主要讨论这种类与类之间的组成关系。
+
+以一段代码为例：
+```
+public class Dog {
+	private int age;
+	
+	private String name;
+	
+	private Leg[] legs;
+	
+	// getters and setters
+	// ...
+}
+
+// Writer是一个具体的实现类，也可能是一个抽象接口，分别是以下两种形式
+// 1. Writer是一个具体的类
+public class Writer {
+
+	public void writeInt(int value) {
+		// ...
+	}
+	
+	public void writeString(String value) {
+		// ...
+	}
+	
+	public void writeObject(Object value) {
+		// ...
+	}
+}
+
+// 2. Writer是一个接口，下面有XXXWriter和YYYWriter两个实现类
+public interface Writer {
+
+	void writeInt(int value);
+	
+	void writeString(String value);
+	
+	void writeObject(Object value);
+}
+
+public class XXXWriter implements Writer {
+}
+
+public class YYYWriter implements Writer {
+}
+```
+
+现在我们要完成的业务功能是：将Dog序列化。
+很明显要完成这个功能，需要让Dog和Writer进行“合作”。如果不考虑合理性，仅仅是完成功能，我们可以使用以下几种“组成方式”：
+
+#### 1. 没有关系
+Dog和Writer不产生直接关系，由client(业务调用者)自行处理。
+此种情况下，client角色必须了解Dog和Writer的内部细节，而且要自己完成如下逻辑：
+```
+Dog dog = ...
+Writer writer = ...
+
+writer.writeInt(dog.getAge());
+writer.writeString(dog.getName());
+for (Leg leg : dog.getLegs()) {
+	writer.writeObject(leg);
+}
+```
+
+这种方式Dog类和Writer类没有任何瓜葛，这也是所有关系中最弱的一种，即没有关系。
+他的优点是非常灵活:
+1. client角色可以完全自定义自己的业务逻辑，比如client1不想序列化age，client2又不想序列化name，甚至非常变态的个性化需求都是可以实现的。
+2. 扩展性好：如果Writer是抽象接口，client角色可以任意挑选自己的Writer实现类；
+
+这种关系的缺点也很明显：client角色必须感知Dog和Writer的内部细节，它们分别都有什么方法或接口，然后自行完成这些业务逻辑。
+
+#### 2. 依赖
+这里的“依赖”并不是我们在之前讨论的代码依赖，在业内关于两个类的组成关系已经统一过术语，分别为：依赖、关联、组合、聚合和继承。这里的依赖特指：一个类通过引用调用另外一个类的方式。
+如果应用到本章的例子中，则是：
+```
+public class Dog {
+	private int age;
+	
+	private String name;
+	
+	private Dog[] children;
+	
+	// getters and setters
+	// ...
+	
+	public void writeMySelf(Writer writer) {
+		writer.writeInt(this.age);
+		writer.writeString(this.name);
+		for (Leg leg : dog.getLegs()) {
+			writer.writeObject(leg);
+		}
+	}
+}
+```
+
+这种方式对于client角色就比较友好了，只需要调用Dog的内部方法即可，也不用关心这个方法是具体如何实现的：
+```
+Dog dog = ...
+Writer writer = ...
+
+dog.writeMySelf(writer);
+```
+
+这种方式的特点是：
+比较灵活，相比“没有关系”而言，不同的client不能定制自己的业务流程和逻辑，但是序列化的方式（使用哪个Writer的实现类）是可以由client角色自行决定的，比如client1想使用XXXWriter，client2想使用YYYWriter。
+
+TODO 缺点：client角色必须同时持有Dog和writer两个引用，才能完成业务功能。如果调用writeMySelf的地方很多，这意味着每个地方都需要通过额外传参或者从某个全局缓存处获取writer的实例。
+
+#### 3. 组合
+和“依赖”不同的是，组合直接将Writer作为自身的一个属性，而不是一个方法入参引用。
+
+```
+public class Dog {
+	private int age;
+	
+	private String name;
+	
+	private Dog[] children;
+	
+	private Writer writer;
+	
+	// getters and setters
+	// ...
+	
+	public void writeMySelf() {
+		this.writer.writeInt(this.age);
+		this.writer.writeString(this.name);
+		for (Leg leg : dog.getLegs()) {
+			this.writer.writeObject(leg);
+		}
+	}
+}
+```
+
+对于client角色，调用则如下：
+```
+Dog dog = ...
+Writer writer = ...
+
+dog.setWriter(writer);
+dog.writeMySelf();
+```
+
+“组合”相比“依赖”要僵硬一些，比如两个不同的client，一个要用XXXWriter，一个要用YYYWriter，就很麻烦。尤其是在多线程并发时，甚至会引入bug。但如果多个client要用的是同一个writer，此时这种特性却又会变成优点，即Writer只需要设置一次。
+```
+Dog dog = ...
+// dog已经被其他client设置过writer，此处直接使用即可
+dog.writeMySelf();
+```
+
+对于“没有关系”和“依赖”来说，每个client都需要获取到writer的实例才行，而就因为要多获取一个writer实例，往往会让系统难以使用。
+试想一下，我们将一个Person对象的Leg，Hand、Head等属性移到类外面去，这样确实会带来一些灵活，但此时我们即使仅仅调用Person的一个walk方法可能都会非常难受，我们还必须先获取到他的两条腿。
+在一个复杂的系统中，更是无数个Dog和Writer之间的关系，如果为了灵活都使用依赖不使用组合，上面的问题将会被放大的更为严重。
+
+
+#### 4. 继承
+和“组合”相比，继承就更为“僵硬”了，它已经趋近于将两块代码揉在一块了。
+上面的三种方式至少还可以保持Writer的可扩展性，即我想在运行时将XXXWriter换成YYYWriter是完全可以做到的。但“继承”不行，它必须指定从一个实体类进行继承。
+
+```
+public class Dog extends XXXWriter {
+	private int age;
+	
+	private String name;
+	
+	private Dog[] children;
+	
+	// getters and setters
+	// ...
+	
+	public void writeMySelf() {
+		this.writeInt(this.age);
+		this.writeString(this.name);
+		for (Leg leg : dog.getLegs()) {
+			this.writeObject(leg);
+		}
+	}
+}
+```
+此时想换成YYYWriter，还得重新编译打包。
+
+但好处也非常明显，对于任何client来说，获取到Dog对象即可，“组合”至少在最开始还要setWriter()一下， 继承什么都不需要，拿来即用，client甚至都感觉不到Writer的存在。
+```
+Dog dog = ...
+// dog已经被其他client设置过writer，此处直接使用即可
+dog.writeMySelf();
+```
+
+
+#### 5. 总结
+我不知道亲爱的读者们是否有一种感觉，这似乎又回归到了某种“道”，我们始终需要在一些选择上作出取舍和平衡，而这种“道”又无处不在。
+
+如果你没有什么个性化的要求，只是想要一个可以住的家，那么你可以选择购买一套精装房；
+如果你觉得室内的装修必须按照你自己的喜好来，那么你只能购买毛坯房了自己找人装修；
+如果你连房屋的结构，布局都想自定义，那么你可能需要学习下如何修建一栋房子，如何自己手工从零修建房子了；
+
+类与类的关系亦是如此：越灵活往往越难用，越僵硬往往越易用。
+灵活性和易用性从来不可兼得，而我们所做的是根据我们的真实需求在这二者之间寻找平衡。
+
+而让我们最终作出抉择的，是仔细思考你是否真的需要这种灵活性；亦或是，这两个类之间的关系是否本来就非常紧密。
+> 我的女儿很喜欢各种动物的魔法气球，于是我买了一堆魔法气球照着视频学着如何编各种小动物，后来我发现其实我可以直接去商场买一些编好的气球就行。
+
+比如，一个人做自我介绍，我们把代码写成了如下：
+```
+public class Person {
+	private String name;
+	
+	public void introductionSelf() {
+		System.out.println("Hello, I'm " + name);
+	}
+}
+```
+会有人站出来说这样不够灵活吗，因为这样张三在自我介绍时，永远只会说：“Hello, I'm 张三”。
+如果改成依赖呢：
+
+```
+public class Person {
+	public void introductionSelf(String name) {
+		System.out.println("Hello, I'm " + name);
+	}
+}
+```
+这样岂不是更灵活，想说啥完全可以自定义，我甚至可以让张三在自我介绍时声称自己是奥巴马。
+但是真的有必要吗？
+
+继承又真的不如组合吗？一个士兵执行任务时需要走路，而这个走路是Human的一个方法。
+如果使用继承：
+```
+public class Soldier extends Human {
+	public void excuteTask() {
+		// ...
+		this.walk();
+		// ...
+	}
+
+}
+```
+
+如果使用组合：
+```
+public class Soldier {
+	private Human human;
+	
+	public void excuteTask() {
+		// ...
+		this.human.walk();
+		// ...
+	}
+
+}
+```
+
+
+而且很多接受Human的方法都不会兼容Soldier，比如去食堂吃饭的函数，Soldier就不能作为传参，士兵该如何吃饭？
+```
+public void dinner(Human human) {
+	// ...
+}
+```
+
+// TODO 这里要写代码证明确实不好用，1. 职业多了该如何办  2. 有一个函数即要用到人的功能，也要用到士兵的功能，该怎么处理？
+支持组合优于继承的同学可能会给出一些方案，比如不是让Solier组合Human，而是让士兵作为Human的一个属性。但如果每种职业都将自己的功能组合到Human中，这务必会让Human类格外庞大。
+我并不是想证明继承优于组合，而是我们都不应该使用特定的场景来放大任何一方的优缺点。
+
+每种关系都有其优缺点，我们应该在合适的业务场景下进行合理的选择。
+
+

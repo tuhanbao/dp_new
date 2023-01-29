@@ -1,0 +1,444 @@
+在2.3 依赖倒置原则中我们讨论了AB问题的解决办法，只要我们想隔离B的变化对A的影响，都可以找到合适的处理策略：BA转换，ACB转换或者不处理。
+但我们终究还是遗漏了一些场景：依赖关系本身的变化。
+
+#### 1. 通过数据结构进行依赖关系解耦
+举个例子：
+```
+public class A {
+
+    private B b1;
+
+    private B b2;
+
+    private B b3;
+}
+```
+A依赖于B，我们假使B不可能有任何变化，A依然可能会受到影响，比如哪天A要增加一个b4属性，或者删除一个b2属性。
+
+有经验的程序员会立马说使用List进行封装，但并不一定可行。比如：
+```
+public class Person {
+    private String name;
+
+    private String id; // 身份证号
+
+    private String address;
+
+}
+```
+person这个对象，后面很可能还会增加phoneNumber属性，我们把Person当做A，这些String属性当成B，我们应该不会把这些String类型的属性封装成一个list，本质原因是Person关注了这些具体String对象的个性。
+也就是说只有当这些属性具有相同的行为特征时，我们才能使用集合对其封装，即只有当我们可以忽略他们的个性，只关注共性的时候可以使用List封装。比如：
+```
+public class A {
+
+    private B b1;
+
+    private B b2;
+
+    private B b3;
+
+    public void doSomething() {
+        b1.hello();
+        b2.hello();
+        b3.hello();
+    }
+}
+```
+我们可以改为：
+```
+public class A {
+
+    private List<B> list;
+
+    public void doSomething() {
+        for (B b : list) {
+            b.hello();
+        }
+    }
+}
+```
+上面这个例子，我们不仅可以通过list解决对B的数量的依赖，还可以解决对这些B的顺序依赖，比如，哪一天我希望b3在第一个执行hello。前面那种方式需要修改代码，后面这种方式则只需要动态修改list的缓存顺序即可。
+
+而且我们发现这种依赖关系其实与B没有任何关系，比如：
+```
+public class A {
+
+    private Dog dog;
+
+    private Cat cat;
+
+    private Door door;
+
+    public void doSomething() {
+        dog.bark();
+        cat.eat();
+        door.open();
+    }
+}
+```
+dog，cat，door完全不属于同一类事务，也没有什么共同点。但无所谓，只要A不关注他们的个性即可（即A只需要这一些对象在调用doSomething函数时去做一件他们应该做的事就好，具体是谁做，怎么做，A都不care），那么我们依然可以使用上面的方式来解决这种问题，只是我们需要通过抽象将Dog、Cat和Door的个性抹去即可。
+```
+public class A {
+
+    private List<Thing> list;
+
+    public void doSomething() {
+        for (Thing thing : list) {
+            thing.doYourSelf();
+        }
+    }
+}
+
+public class Dog implements Thing {
+    public void bark() {
+    }
+
+    @Override
+    public void doYourSelf() {
+        this.bark();
+    }
+}
+
+public class Cat implements Thing {
+    public void eat() {
+        // some code
+    }
+
+    @Override
+    public void doYourSelf() {
+        this.eat();
+    }
+}
+
+public class Door implements Thing {
+    public void open() {
+        // some code
+    }
+
+    @Override
+    public void doYourSelf() {
+        this.open();
+    }
+}
+```
+
+总结一下，如果当我们对一类具有共同行为特征的群体有依赖时，我们可以通过一个数据结构与其进行解耦（将对这一类群体的关系依赖转移到数据结构中）。
+为了方便讨论，我们暂且把这种解耦方式称之为**ABs转换**；
+
+ABs转换与BA转换和ACB转换看起来可能很像，但其实存在差别。
+
+BA转换经常需要抽象一个接口，而ABs转换并不是必须抽象一个接口，比如上面依赖三个B的例子，因为都属于同一个类型，则并不需要抽取接口。
+但是大部分情况下ABs还是依赖BA转换做一次统一抽象，比如Dog、Cat、Door的例子。
+> 如果仅仅使用BA转换，我们很可能将上面Dog、Cat、Door的例子改成这样：Dog和Cat抽象为Animal，Door抽象成IDoor，但这并不能解决后续依赖关系变更导致的代码变更问题。
+
+BA转换更关注的是B本身的变更给A带来的影响，而ABs转换关注的是B的数量、与B的关系这些因素变化给A带来的影响。
+在实际项目中，ABs转换为了将多个B抽象成同一类对象，大部分情况下还是依赖BA转换做一次统一抽象。
+
+有时我会想ABs是一种ACB转换，List就是ACB中的C。但其实不然，如果使用ACB转换，代码应该会变成这样：
+```
+public class A {
+
+    private C c;
+
+    public void doSomething() {
+        this.c.doSomething();
+    }
+}
+
+public class C {
+
+    private Dog dog;
+
+    private Cat cat;
+
+    private Door door;
+
+    public void doSomething() {
+        dog.bark();
+        cat.eat();
+        door.open();
+    }
+}
+```
+我们只是使用C隔离了这种依赖影响。当A只有一个而且不是对修改特别敏感的模块时，改A和改C并没有什么区别，这种ACB的应用并没有太大意义。而且当这种依赖关系发生变化时，ACB转换是需要修改代码的，但使用数据结构，只需要修改运行时的数据即可，我们完全可以通过配置文件，界面配置等动态的修改这种依赖关系而不需要更改任何代码，这两者具有本质的区别。
+
+#### 2. if else的处理
+ABs转换还有一种很常见的表现方式，即Hash表。
+我们可以从最常见的if else处理讲起。
+
+
+代码中总会有些if else，有些比较稳定，不怎么会变，即使变了影响也很小。这种if else并不需要处理，出现if else也不是什么遭雷劈的事情。
+
+但如果这段if else总是一会多一个分支，一会减一个分支，我们又想隔离这种变化，那该怎么办？
+
+一般有以下几个策略：
+
+
+##### 2.1. 转移到上游
+比如
+```
+public class A {
+    public void test(int type) {
+        if (type == 1) {
+            // code block 1
+        } else if (type == 2) {
+            // code block 2;
+        } else {
+            // code block 3
+        }
+    }
+}
+```
+我们把code block 1、2、3分别抽成三个函数method1、method2、method3，让上游自己选择调用那个，即将所有调用a.test(1)、a.test(2)、a.test(其他)的地方分别改为调用a.method1()、a.method2()、a.method3();
+而使用变量调用的地方，则会引入新的if else:
+```
+public static void clientCall(int type) {
+    A a = new A();
+    a.test(type);
+}
+
+// 改为
+
+public static void clientCall(int type) {
+    A a = new A();
+    if (type == 1) {
+        a.method1();
+    } else if (type == 2) {
+        a.method2();
+    } else {
+        a.method3();
+    }
+}
+```
+
+将if else逻辑转移到上游后，我们就只要把所有的method写好，他自己愿意用哪个就选哪个。
+> 当然，如何是新加method的情况，当前类还是会受到影响。但大多时候，我们会把method抽象到类的层次，此时扩展一个新的类就可以了。
+
+##### 2.2. 转移到下游
+将逻辑扔给下级，即
+```
+public class A {
+    public void test(int type) {
+        if (type == 1) {
+            // code block 1
+        } else if (type == 2) {
+            // code block 2;
+        } else {
+            // code block 3
+        }
+    }
+}
+```
+改为
+```
+public class A {
+    public void test(int type) {
+        C c = new C();
+        b.test(type);
+    }
+}
+```
+把if else这些逻辑全部丢给了下游C，其实下级的test函数一样还是存在if else。一般只有很多处代码需要共用这段if else逻辑的时候才会这样做，比如：
+```
+    public void test1(int type) {
+	    // code block 1
+		// ... 
+        if (type == 1) {
+            // code block 1
+        } else if (type == 2) {
+            // code block 2;
+        } else {
+            // code block 3
+        }
+		
+		// code block 2
+		// ... 
+    }
+	
+	public void test2(int type) {
+		// code block 3
+		// ... 
+		
+        if (type == 1) {
+            // code block 1
+        } else if (type == 2) {
+            // code block 2;
+        } else {
+            // code block 3
+        }
+		
+		// code block 4
+		// ... 
+    }
+
+```
+这种情况下，我们可以把if else移到下游去，这里本质就是一种ACB转换的代码复用。
+
+--------------------------
+上面两种方式都没有解决问题，if else仍然存在，只不过我们可以根据我们自己的意愿将这段逻辑放到我们想放的地方。
+
+##### 2.3. 转移到hash表中
+hash表只是一个概念，任何语言都可以自己实现，类似于java中的Map。
+比如：
+```
+public class A {
+
+    public String test(int type) {
+        if (type == 1) {
+            return "tubie";
+        } else if (type == 2) {
+            return "tuhanbao";
+        } else {
+            return "nothing";
+        }
+    }
+}
+```
+可以使用hash表改成：
+```
+public class A {
+    private static Map<Integer, String> map = new HashMap<>();
+    
+    private static final String DEFAULT = "nothing";
+    static {
+        map.put(1, "tubie");
+        map.put(2, "tuhanbao");
+    }
+    
+    public String test(int type) {
+        if (map.containsKey(type)) {
+            return map.get(type);
+        } else {
+            return DEFAULT;
+        }
+    }
+}
+```
+
+感觉代码还更多了。确实如此，因为这个例子过于简单，体现不出太大好处。不过至少有一点：if else无论变成多少个，test函数是不用变了。
+试想一下一个更复杂的例子：
+```
+public class A {
+
+    public void test(int type) {
+        if (type == 1) {
+            // code block 1
+        } else if (type == 2) {
+            // code block 2;
+        // ... many else if
+        } else if (type == 100) {
+            // code block 100
+        } else {
+            // code block 0
+        }
+    }
+}
+```
+每个if分支是一个比较复杂的逻辑，这个test函数就有点庞大了。当然，不会有人傻到把这么多代码累到一块。
+> 如果有，请原谅我的措辞，我无心冒犯。
+
+一般会把每段if else封装成一个函数，于是变成这样：
+```
+    public void test(int type) {
+        if (type == 1) {
+            method1();
+        } else if (type == 2) {
+            method2();
+        // ... many else if
+        } else if (type == 100) {
+            method100();
+        } else {
+            method0();
+        }
+    }
+```
+
+我们可以将每个if分支看一个一个的B，由于这些分支有时会加，有时会减，会导致一会要增加一个B，一会少一个B。List解决的是顺序关系，Map则可以解决这种映射关系。
+使用ABs转换，我们可以改成这样：
+```
+public class A {
+    private static Map<Integer, Function> map = new HashMap<>();
+
+    private static final Function DEFAULT = method0;
+    static {
+        map.put(1, method1);
+        map.put(2, method2);
+        // ... many put
+        map.put(100, method100);
+    }
+
+    public void test(int type) {
+        if (map.containsKey(type)) {
+            map.get(type).invoke();
+        } else {
+            DEFAULT.invoke();
+        }
+    }
+```
+如果是支持将函数当成一个对象的编程语言，做到上面的样子就可以了。但是java不行，java必须将函数抽象到类的层面。所以真实代码是这样：
+```
+public class B {
+    private static Map<Integer, Handler> map = new HashMap<>();
+
+    private static final Handler DEFAULT = new DefaultHandler();
+    static {
+        map.put(1, new Handler1());
+        map.put(2, new Handler2());
+        // ... many put
+        map.put(100, new Handler100());
+    }
+
+    public void test(int type) {
+        if (map.containsKey(type)) {
+            map.get(type).call();
+        } else {
+            DEFAULT.call();
+        }
+    }
+
+}
+
+public interface Handler {
+    void call();
+}
+
+
+public class DefaultHandler implements Handler {
+    @Override
+    public void call() {
+        // method0 logic
+    }
+}
+
+public class Handler1 implements Handler {
+    @Override
+    public void call() {
+        // method1 logic
+    }
+}
+
+// ... Handler2 ~ Handler100
+```
+当if else逻辑发生变更时，以前需要修改代码，现在只需要修改map中的数据即可。
+> 有同学质疑说，假设增加一个分支，以前需要加一个method，然后增加一行if else；而现在则是新增一个handler，然后增加一行map.put()语句；两者几乎一样的改动工作量，有什么好处？这里其实在讲List实现ABs转换时已经提到过：使用数据结构，只需要修改运行时的数据即可，我们完全可以通过配置文件，界面配置等动态的修改这种依赖关系而不需要更改任何代码，这两者具有本质的区别。试想一下，我想在运行时，让type=1时执行method2，而type=2时执行method1，通过操作map可以非常简单的实现，但if else这种静态代码不行。设计手段往往追求的不是更少的代码，反而会经常增加一个中间层C引入更多的代码，设计的目的更多的是为了隔离，解决或减少某种依赖关系倒置的代码改动，让系统更为灵活。
+
+
+#### 4. 总结
+
+至此，三种设计手段全部介绍完毕：BA转换，ACB转换和ABs转换。
+BA转换和ACB转换主要为了隔离B的变化，ABs转换主要为了隔离依赖关系的变化。这三种模式都是依赖倒置原则（隔离变化）的体现。
+而这三种模式终究还是解决不了所有问题：
+
+- BA转换对于不可控的B没有办法，而且阻止不了其对client角色的改动影响；
+- ACB转换只能削减影响，C始终承担了所有的伤害，而且大部分情况还需要多个A保持一致的行为，否则ACB的性价比会非常低廉；
+- ABs转换则要求B这一类群体具有一致的行为，否则也无法处理，而且经常依赖BA转换。
+这三种模式，大部分场景下都需要增加一个C，本身就会带来一定的约束和工作量，如果业务最终没有按照预期变动（即不需要隔离），往往得不偿失。
+
+再加上对于A本身涉及的业务改动，孰都无能为力。
+
+设计终究是存在极限的，我们始终要考虑设计带来的额外成本，和其隔离变化后所能复用节省的工作量。在千变万化的业务需求中寻找这种平衡，便是软件设计之道。
+
+
+TODO 2022 11-8
+ABs有点像是一对多中间加了一个灵活的转接头，但是它不承担调用的功能。所以说，他是ACB吗，又不全是，他需要你自己获取数据了自己调用；你说他不是吗，他明明就是在A和Bs之间加了一层类。
+其实应该跟ACB还是有关系的，先改成ACB，然后将关系管理解耦出来成为集合类，保留了调用关系给A。

@@ -1,0 +1,378 @@
+我并认为这些剩下的原则算得上是原则，但是仍然有必要做出一些说明。
+
+### 1. 接口隔离原则
+**接口隔离原则(Interface Segregation Principle, ISP)：不应该强行要求客户端依赖于它们不用的接口；**
+接口隔离原则，指的是接口太胖，导致子类在复用接口的api时，需要实现很多无关的方法。出现这种情况一般就两个原因：
+- 接口做的事（定义的方法）太多；
+- 越级把下级接口的事做了；
+这本身就是违反单一职责原则的两个最基本体现。
+
+// TODO 应该举个例子，什么是做得太多，什么是越级
+
+### 2. 最少知道原则
+**最少知道原则(Law of Demeter, LoD)：一个软件实体应当尽可能少地与其他实体发生相互作用;**
+违反最少知道原则本质就是越级。有时是自己关注了自己下级的太多细节，有时候是关注了别人下级的细节，同一个层次的人就应该与同一个层次的人对话；
+
+### 3. 里氏替换原则
+**里氏替换原则（Liskov Substitution Principle, LSP）：所有引用基类的地方必须能使用其子类的对象进行替换**
+
+里氏替换原则和单一职责原则和依赖倒置原则还真没有什么关系，但我个人认为它并不能算作一个原则，更像一个指导性意见。
+
+在讲里氏替换原则前，我们先看一个最基本的代码复用问题：
+```
+public static void methodA() {
+    // code block 1 : do some special operation A
+    // code block 2 : much code is same as code block 4
+}
+
+public static void methodB() {
+    // code block 3 : do some special operation B
+    // code block 4 : much code is same as code block 2
+}
+```
+上面的methodA和methodB有很多代码是一样的，我想问下，当大家碰到这种情况，是否会抽一个公共方法复用代码？
+```
+public static void methodA() {
+    // code block 1 : do some special operation A
+    method();
+}
+
+public static void methodB() {
+    // code block 3 : do some special operation B
+    method();
+}
+
+private static void method() {
+    // code block 2
+}
+```
+如果不复用，以后code block 2的逻辑有修改，则需要改多处；
+但如果复用，可是有一天methodA的逻辑变了，需要修改method方法，但是methodB并不需要任何改动呢？如果我们直接修改method方法，会导致methodB的原有业务出现错误；最终我们不得不将method还是分成了两份。
+
+其实是否复用，是需要我们作出一些业务判断的。如果两段代码是一个变化因子控制的，则应该抽到一起复用的；但如果是两个不同变化因子控制的，即使代码相同，也应该分开（分开的粒度可以斟酌）。
+> 如果看不清业务的变化，建议先复用。因为先复用，后面真的发生分歧，我们很容易找到方法的所有调用者，然后根据实际情况再分开即可；但如果不复用，则很难知道还有其他地方也有相同的逻辑，很可能出现漏改，比如只改了methodA，忘记修改了methodB。
+
+从例子可以看出，复用有时候确实是可能带来一些“恶果”的：修改公共方法，会影响到所有人；而一旦其中部分使用者的行为出现不一致，而且刚好我们疏忽了这些不一致，便会产生错误。
+但是，我们并不能因为这个可能存在的“恶果”，就彻底**抛弃复用**。
+
+我们再来看下组合和继承的基本例子：
+```
+// 组合方式一：C组合B
+public class C1 {
+    private B b;
+
+    public void doB() {
+        this.b.doB();
+    }
+    
+    public void doC() {
+    	// ...
+    }
+}
+
+
+// 组合方式二：B组合C
+public class B {
+    private C c;
+
+    public void doB() {
+        // ...
+    }
+    
+    public void doC() {
+    	tihs.c.doC();
+    }
+}
+
+// 继承方式
+public class C2 extends B {
+    public void doC() {
+		// ...
+	}
+}
+```
+
+我们可以罗列几种场景下三者的优劣：
+1. B发生变更，比如B新增了一个功能doSomething：
+如果C也需要同步增加这个功能，那么C1需要增加一个新的函数转调B，C2则不需要改动；
+如果C并不想要B这个功能，那么C1不需要改动，C2则可能需要重写B的新增方法以免被误调；
+可以看出，如果C和B在业务上经常保持一致，使用继承会更方便；如果C和B在业务上并不是经常一致的，使用组合会更方便；
+
+2. 组合更灵活，比如B有两个子类B1和B2，C1组合了B1，C2继承了B1，此时如果想换成B2：
+``
+// 组合方式一
+public class C1 {
+    private B b;
+
+    public void doB() {
+        this.b.doB();
+    }
+	
+	public void doC() {
+		// ...
+	}
+}
+
+// 组合方式二
+public class C2 {
+    private B b;
+
+    public void doB() {
+        this.b.doB();
+    }
+	
+	public void doC() {
+		// ...
+	}
+}
+
+// 继承
+public class C2 extends B1 {
+    public void doC() {
+		// ...
+	}
+}
+```
+C1可以运行时通过setB()将B1换成B2：
+```
+c1.setB(new B2());
+```
+C2却没有办法，因为继承是一种硬编码关系，只能更改代码重新出版本。
+
+
+3. 继承更易用：
+比如此时一个函数的传参是B：
+```
+public void test(B b) {
+	// ...
+}
+```
+如果是继承，这个函数还可以兼容C2。但如果是组合，则只能给C1单独写个方法了，除非让C1和B同时实现一个共同的接口；
+
+
+继承的本质是子类复用了父类的一些方法。但是可能有一天，某个子类的业务逻辑更改，导致它不得不重写一个父类的方法。这将会产生一些后果：
+- 使用父类的地方并不知道子类的存在，可能因为它的特立独行产生一些错误的预期；
+- 父类修改自己的方法时，期望所有子类都被更改，但是重写了方法的子类并不受改动影响；
+即里氏替换所说的：引用基类的地方有可能出现无法使用其子类的对象进行替换的场景。
+
+这是不是和复用公共方法非常相似：因为一旦这些共用者出现不一致，而我们又修改了这个公共方法时，就可能会出现问题。
+
+里氏替换原则，正是在提醒我们，警惕这种重写了父类的方法可能导致的“恶果”。但是很多人，会将里氏替换原则理解为：多用组合，少用继承。
+再来看下里氏替换原则经常用到的一个例子，正方形和长方形:
+```
+public class Rectangular {
+    protected int width, height;
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getArea() {
+        return this.width * this.height;
+    }
+
+}
+
+public class Square extends Rectangular {
+
+    @Override
+    public int getArea() {
+        return this.width * this.width;
+    }
+}
+```
+
+很多人都说上面的代码违反了里氏替换原则，原因是某些情况子类不能代替父类，比如下面的代码，当传入的是长方形和正方形时得到的结果不一样：
+```
+public void test(Rectangular rectangular) {
+    rectangular.setWidth(5);
+    rectangular.setHeight(6);
+    Assert.assertEquals(rectangular.getArea(), 30);
+}
+```
+
+
+可是，不使用继承，使用组合，代码变成如下：
+```
+public class Rectangular {
+    protected int width, height;
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getArea() {
+        return this.width * this.height;
+    }
+}
+
+public class Square {
+
+    private Rectangular rectangular;
+
+    public Square() {
+        this.rectangular = new Rectangular();
+    }
+
+    public void setLength(int length) {
+        this.rectangular.setHeight(length);
+        this.rectangular.setWidth(length);
+    }
+
+    public int getArea() {
+        return this.rectangular.getArea();
+    }
+}
+
+```
+
+如果长方形有100个方法，而且为了让test方法同时兼容两者，我们还得给长方形和正方形抽象出一个公共的接口：
+```
+public interface IRectangular {
+
+    public void setHeight(int height);
+
+    public void setWidth(int width);
+
+    public int getArea();
+
+    public void method1();
+    public void method2();
+
+    // ....
+
+    public void method100();
+}
+
+public class Rectangular implements IRectangular {
+    protected int width, height;
+
+    @Override
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    @Override
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    @Override
+    public int getArea() {
+        return this.width * this.height;
+    }
+
+    @Override
+    public void method1() {
+    }
+
+    @Override
+    public void method2() {
+    }
+
+    // ....
+
+    @Override
+    public void method100() {
+    }
+}
+
+public class Square implements IRectangular {
+
+    private Rectangular rectangular;
+
+    public Square() {
+        this.rectangular = new Rectangular();
+    }
+
+    public void setLength(int length) {
+        this.rectangular.setHeight(length);
+        this.rectangular.setWidth(length);
+    }
+
+    @Override
+    public void setHeight(int height) {
+        this.setLength(height);
+    }
+
+    @Override
+    public void setWidth(int width) {
+        this.setLength(width);
+    }
+
+    @Override
+    public int getArea() {
+        return this.rectangular.getArea();
+    }
+
+    @Override
+    public void method1() {
+        this.rectangular.method1();
+    }
+
+    @Override
+    public void method2() {
+        this.rectangular.method1();
+    }
+
+    // ....
+    @Override
+    public void method100() {
+        this.rectangular.method100();
+    }
+
+}
+```
+test方法再改成如下：
+```
+public void test(IRectangular rectangular) {
+    rectangular.setWidth(5);
+    rectangular.setHeight(6);
+    Assert.assertEquals(rectangular.getArea(), 30);
+}
+```
+
+可是test方法仍然没法通过，还是只能分成两个方法：
+```
+public void test1(Rectangular rectangular) {
+    rectangular.setWidth(5);
+    rectangular.setHeight(6);
+    Assert.assertEquals(rectangular.getArea(), 30);
+}
+
+public void test2(Square square) {
+    square.setWidth(5);
+    square.setHeight(6);
+    Assert.assertEquals(square.getArea(), 36);
+}
+```
+
+
+我实在是想不出该如何使用组合解决这种问题，可能这个问题本身就就无法解决，无论是使用继承或组合。因为正方形和长方形的getArea逻辑本就不同，我们就不应该期望二者兼容所有调用者。
+
+继承，很多时候是希望复用父类的一些代码，并在此基础上增加一些自己的个性；而组合，更多的是一个类充当另一个类的组成部分，比如一个属性，一个部件。
+前者往往更简洁；后者更灵活、可运行时替换；
+两者本身的应用场景就不相同，而且组合和继承均有优缺点，我们不应通过特定案例来放大其中一方的缺点并以此来否定它。
+
+### 4. 合成复用原则
+**合成复用原则(Composite Reuse Principle, CRP):尽量使用对象组合,而不是继承来达到复用的目的。**
+
+上面我们已经讨论过合成复用原则是一个错误的结论。
+
+组合本质上是参数化的一种表现：将一个变化因子抽象出来并隔离出去，做成了一个属性对象。
+在关于参数化的讨论中，我们说过：任何两个相同接口的实现类，都可以通过增加成员属性或参数合并成一个类。
+所以任何使用继承的地方，你只要“尽量”，一定可以变成组合。如此看来，继承都没有了存在的必要。
+
+当然，我并不是批判“组合”；反而，“参数化”是设计手段中我个人认为最为重要的一种，“组合”在很多时候降低我们的代码复杂度，增加代码灵活性。
+我只是想说，无论是“继承”还是“组合”，他们只是我们的设计手段或方式，而这些手段或方式并无优劣之分，我们要做的是在合适的时候做正确的选择而已。
+
+
+// TODO 里氏替换： extends和implements已经在1.8之后很相近，那是不是连实现接口都不让了，本质是警惕覆盖父类的方法，但是现在interface也可能被覆盖。
