@@ -1,5 +1,4 @@
-单一职责原则是面向对象设计原则中最重要也是最难实施的原则。
-
+单一职责原则是面向对象设计原则中最重要也是最难理解的原则。
 
 **单一职责原则（Single Responsibility Principle,SRP）**：一个类应该只有一个变化因子。
 
@@ -9,19 +8,29 @@
 
 > 单一职责原则的适用范围甚至不仅仅是软件行业，它几乎可以应用在我们从事生产活动的各行各业。
 
-### 两个例子
 
-在讲解单一职责原则之前，我们先来看两个例子
+### 什么是一
+金字塔模型是人类社会应用最普遍的模型之一，它可以用来阐述什么是“一”。
 
-#### 例子1
+- 一个国家，需要先分成一个一个省，再分成一个一个市，然后是区县，乡镇，村/街道，最后才是一个一个具体家庭和自然人；
+- 一篇复杂的论文，需要分为若干章，每一章再分为若干节，每一节又分为若干段，再由最基本的一句话，一个字组成；
+- 一年分为12个月，一个月分为30天，一天再分为24个小时，一小时分为60分，一分又有60秒；
+
+这种金字塔式的递归划分方式是人类用于认识整个世界的基础：宇宙的组成方式（星系群、银河系、太阳系、地球）、公司的组织结构、数字（个十百千万）等等都是如此。这源于人类自身的局限：一个国王不可能直接管理成百上千万的臣民；将一篇十万字的论文放在一个段落中会造成难以理解；如果不区分年月日时分，那么笔者写下这句话的时间是自耶稣诞生以来的第1676371811秒，没有人能短时间内反应出这个数字所代表的意义。
+
+同理，我们也不可能将一个项目工程的所有代码写在一个类或者一个函数中。一个大型软件系统需要分成多个子系统，一个子系统要分成多个服务或模块，如果有需要会再划分为多个子模块，最后才是一个个包、类、函数和代码语句。
+
+而这种处于金字塔不同层次而互相独立的软件单元，便是我们所说的“一”。
+
+### 例子1
 假设下面这幅画是一幅“巨著”，工作量巨大，我们需要将它分配给四个“画家”协作进行完成，该如何划分？
 ![](D:\tuhanbao\软件设计\image\image-20211116184006176.png)
 
-一种最简单粗暴的分法方式一：水平垂直各砍一刀，平分为四块，每人各画一部分。
+一种最简单粗暴的分法（方式一）：水平垂直各砍一刀，平分为四块，每人各画一部分。
 
 ![](D:\tuhanbao\软件设计\image\image-20211116195031986.png)
 
-还有一种分法方式二：按照元素来分。
+我们也可以使用另外一种分法（方式二）：按照元素来分。
 一人画天空：
 
 ![](D:\tuhanbao\软件设计\image\image-20211116195221968.png)
@@ -38,18 +47,18 @@
 
 ![](D:\tuhanbao\软件设计\image\image-20211116195405296.png)
 
-如果仅仅是完成这幅画，两种方式工作量其实差距不大。但后续如果需要修改这幅画，两种方式就很有区别了。
-- 比如要修改白云的颜色，会发现画家一和画家二都需要改动，而且工作比较雷同；
-- 如果是修改大山，四个画家甚都要修改而且还要对齐边界，否则最后拼不起来可就麻烦了；
-- 又或者突然哪天又要新作一幅画，要求有同样的logo，那么方式二可以直接把签名拿去复用，但方式一就很难抠出来了；
+如果仅仅是完成这幅画，两种方式工作量其实差距不大，但后续如果还需要修改这幅画，两种方式则会出现天壤之别：
+- 比如要修改白云的颜色，会发现方式一中的画家一和画家二都需要改动，而且工作比较雷同；
+- 如果是修改大山，方式一的四个画家都要修改而且还要对齐边界，否则最后整幅画拼起来可能会特别难看；
+- 又或者突然哪天又要新作一幅画，要求有同样的logo和大山，那么方式二可以直接把签名和大山拿去复用，但方式一几乎就没有任何可以继承的东西；
 
-这个例子中，方式一类比的是面向过程式的设计，方式二则是面向对象式的设计。前者极难复用，发生变更时与周边模块耦合严重，很多逻辑也不够聚集，项目一旦庞大会变得复杂无比；后者复用性强，各模块互不影响，可各自扩展。
+这个例子中，方式一类比的是面向过程式的编程，方式二则是面向对象式的编程。前者极难复用，发生变更时与周边模块耦合严重，很多相同的逻辑也不够聚集，项目一旦庞大会变得复杂无比；而后者复用性强，各模块互不影响，可各自扩展，但在初期会有额外的工作量投入。
 
-在项目足够小而且简单的情况下（比如一个简单的编程题），面向过程的工作量一般会更小，开发速度更快；而面向对象或多或少会有一些冗余工作（画中有一部分太阳会被大山遮挡，其实可以不画，相当于有部分工作量的浪费，面向对象也是如此），但是一旦项目相对稍大的时候，由于面向对象的逻辑相关性和可复用性，会导致最终的开发工作量、维护工作量都会远小于前者；
+在项目足够小而且简单的情况下（比如一个简单的编程题），面向过程的工作量一般会更小；而面向对象或多或少会有一些冗余工作（画中有一部分太阳会被大山遮挡，其实可以不画，相当于有部分工作量的浪费，面向对象编程也是如此），但是一旦项目规模相对稍大的时候，由于面向对象的逻辑相关性和可复用性，会导致最终的开发工作量、维护工作量都会远小于前者。
 
-#### 例子2
+### 例子2
 
-软件领域有一个经常使用的隐喻：冰箱装大象，如果使用代码表示，会有以下一些方式：
+软件领域有一个经常使用的隐喻：冰箱装大象，如果使用代码实现，会有以下一些方式：
 ```
 // 方式一
 public void putElephant2Fridge() {
@@ -60,19 +69,19 @@ public void putElephant2Fridge() {
 
 private openFridgeDoor() {
     // open the fridge door start ...
-    // some code
+    // some code...
     // open the fridge door end   ...
 }
 
 private putElephant() {
     // put elephant start ...
-    // some code
+    // some code...
     // put elephant end   ...
 }
 
 private closeFridgeDoor() {
     // close the fridge door start ...
-    // some code
+    // some code...
     // close the fridge door end   ...
 }
 ```
@@ -86,17 +95,17 @@ public void putElephant2Fridge() {
 
 private openFridgeDoor() {
     // open the fridge door start ...
-    // some code
+    // some code...
     // open the fridge door end   ...
 }
 
 private putElephantAndClose() {
     // put elephant start ...
-    // some code
+    // some code...
     // put elephant end   ...
 
     // close the fridge door start ...
-    // some code
+    // some code...
     // close the fridge door end   ...
 }
 ```
@@ -105,15 +114,15 @@ private putElephantAndClose() {
 // 方式三
 public void putElephant2Fridge() {
     // open the fridge door start ...
-    // some code
+    // some code...
     // open the fridge door end   ...
 
     // put elephant start ...
-    // some code
+    // some code...
     // put elephant end   ...
 
     // close the fridge door start ...
-    // some code
+    // some code...
     // close the fridge door end   ...
 }
 ```
@@ -123,44 +132,45 @@ public void putElephant2Fridge() {
 public void putElephant2Fridge() {
     openFridgeDoor();
     // put elephant start ...
-    // some code
+    // some code...
     // put elephant end   ...
     closeFridgeDoor();
 }
 
 private openFridgeDoor() {
     // open the fridge door start ...
-    // some code
+    // some code...
     // open the fridge door end   ...
 }
 
 private closeFridgeDoor() {
     // close the fridge door start ...
-    // some code
+    // some code...
     // close the fridge door end   ...
 }
 ```
 
 
-我们如果把冰箱放大像简单的看成四个函数和几行代码的拼凑，那么这四种不同方式代码的好坏则很难评判。因为即使我们按照方式三面向过程流水线的方式来写也不会有太大问题，写的再烂就这么几行代码，好点差点区别并不大。但如果我们将思维拔高一些，不要局限于改了两行还是三行代码，而是从代码的可复用性来评判，则会大有区别：我们可以将开冰箱门，放大象和关冰箱门想象成三个模块或者三段很庞大而且复杂的逻辑，按照我们之前讲过的**改是一个质的问题，改多少是一个量的问题**，我们来比较哪种写法会让需求发生变更时影响的范围最小（比如不要引起不相关代码的重新编译等），此时再来评判代码优劣则会容易理解很多。
+我们如果把冰箱放大象只是看成一个简单的功能，那么这四种方式相差并不明显，代码量上几乎一样。但如果我们将思维拔高一些，不要局限于改了两行还是三行代码，而是从代码的可复用性来评判，则会存在一些区别。为了更清楚的看清这些区别，我们可以尝试将开冰箱门，放大象和关冰箱门想象成三个较大的模块，而且这些模块在未来都可能发生变更，此时再来看下哪种方式在业务发生变更时影响的范围最小（比如不要引起不相关代码的重新编译等）。
 
-稍微分析一下，会发现方式一要优于方式二和方式三，方式二把放大像和关冰箱门放在了一起，一旦放大象和关门任何一方的业务逻辑放生变更，由于两者的代码纠缠在一起，就会互相影响；方式三则更过分，把开冰箱门也揉了进去，任何一方变更都会影响所有。至于方式四，和方式一好像差不多；开冰箱门，放大象和关冰箱门任何一个模块的业务发生变更都只会影响一处逻辑。
+稍微分析一下，会发现方式一要优于方式二和方式三，方式二把放大象和关冰箱门放在了一起，一旦放大象和关冰箱门任何一方的业务逻辑放生变更，由于两者的代码纠缠在一起，就会互相影响；方式三则更过分，把开冰箱门也揉了进去，任何一方的业务变更都会影响所有模块。至于方式四，和方式一好像差不多；开冰箱门，放大象和关冰箱门任何一个模块的业务发生变更都只会影响一处代码。
 
-很明显，方式二和方式三违反了单一职责原则，他们并没有“专心的做一件事”。
-但仔细思考一下，会发现一些问题：putElephant2Fridge函数要完成把大象放冰箱的功能，无论方式一、方式二还是方式三，putElephant2Fridge函数对调用者来说做的事情都是一样的，没有多也没有少；只不过区别在于，它把所要做的事情，是分给三个子函数做、两个子函数做，还是自己一个人全部做完而已。
+很明显，方式二和方式三违反了单一职责原则，他们并没有“专心的做一件事”。但仔细思考一下，会发现一些问题：putElephant2Fridge函数要完成把大象放冰箱的功能，无论方式一、方式二还是方式三，putElephant2Fridge函数对调用者来说做的事情都是一样的，没有多也没有少；只不过区别在于，它把所要做的事情，是分给三个子函数做、两个子函数做，还是自己一个人全部做完而已。
 
 这其实很像一个大领导，把一个比较大的项目交给一个小领导，如果以结果为导向的话，只要这个小领导把项目搞定了，就算成功。至于这个小领导是把所有的事情自己一个人全干了，还是如何内部再分工，对大领导来说都不太关心，他要的只是结果。从这个角度看，putElephant2Fridge函数好像没有违反单一职责原则。
+
 实际情况是，将所有的事情一个人扛，或者把过多的事情分给一个下属都是一种管理失职：管理本身就是一件事，而这件事最容易被忽略！
 
-我分开问过许多同事，均非常一致的认为：方式二和方式三违反了单一职责原则，方式二违反单一的是putElephantAndClose函数，方式三违反单一的是putElephant2Fridge函数；如果我再具体的问方式二中putElephant2Fridge函数有没有违反单一职责原则，他们给出的答案都是**没有**。至于方式四，会出现一些分歧，有些人认为违反了单一职责原则，有些人认为没有；当我问方式四哪里违反了单一职责原则，大部分人都会模棱两可。
+笔者咨询过许多同事，均非常一致的认为：方式二和方式三违反了单一职责原则，方式二违反单一的是putElephantAndClose函数，方式三违反单一的是putElephant2Fridge函数；如果我再具体的问方式二中putElephant2Fridge函数有没有违反单一职责原则，他们给出的答案都是**没有**。至于方式四，会出现一些分歧，有些人认为违反了单一职责原则，有些人认为没有；当我对这些认为违反了单一职责原则的同事进行追问，方式四具体是哪里违反了单一职责原则时，大部分人都会模棱两可。
 
-方式二中的putElephantAndClose和方式三的putElephant2Fridge做了多件事，我们大都能轻易发现；而方式二和方式四中的putElephant2Fridge违反了单一职责原则却很难被发现。
+方式二中的putElephantAndClose和方式三的putElephant2Fridge做了多件事，我们大都能轻易发现；而方式二和方式四中的putElephant2Fridge违反了单一职责原则有时却很难被发现。
 
-我们可以列举一个场景看下方式四这种越级所带来的缺点：
+我们可以列举一个场景看下方式四和方式一的区别：
 
-假设我们放大象的时候希望塞一些冰块，以防止大象腐烂，将流程变为：开冰箱门->放大象->塞冰块->关冰箱门。整个需求变更只是改变了流程，加了一个环节，原本的开门，放大象和关门并没有任何改变，此时方式二和方式三肯定会受到影响，方式四由于把放大象的逻辑放在了主函数中，也会因为流程变更被影响；只有方式一表现如初，三个逻辑块都不会感知这种变动。
+假设我们放大象的时候希望塞一些冰块，以防止大象腐烂，将流程变为：开冰箱门->放大象->塞冰块->关冰箱门。整个需求变更只是改变了流程，加了一个环节，原本的开门，放大象和关门并没有任何改变，此时方式四由于把放大象的逻辑放在了主函数中，也会因为流程变更被影响；只有方式一表现如初，三个逻辑块都不会感知这种变动。
 
 ```
+// 方式一
 public void putElephant2Fridge() {
     openFridgeDoor();
     putElephant();
@@ -172,31 +182,19 @@ public void putElephant2Fridge() {
 }
 ```
 
-可见，当函数的流程（即协调和管理工作）本身就可能成为一个变化因子的时候，也是应该当做一件单独的事情进行隔离的。
-此时我们再来梳理下，各个函数真正应该做的“**一件事**”是什么：
+可见，当函数的流程（即协调和管理工作）本身就可能成为一个变化因子的时候，也需要被当做一件单独的事情进行隔离。此时我们再来梳理下，各个函数真正应该做的“**一件事**”是什么：
 - putElephant2Fridge函数：协调好冰箱装大象各步骤的调用关系和顺序；
 - openFridgeDoor函数：做好开冰箱门这件事；
 - putElephant函数：做好放大象这件事；
 - closeFridgeDoor函数：做好关冰箱门这件事；
 
 
-> 设计原则中有一个“最少知道原则”，常常就是因为越级引起的，一个高层类或函数关注了太多的下层逻辑，本质上还是违反了单一职责原则，因为具体的执行细节虽然“归你管”，但“不归你做”。
-
-
 
 ### 什么是一
 
-从上面两个例子，我们可以看出：
+上面的两个例子，第一个例子代表着垂直划分：将一幅画分成四份（天空、大山、树林和签名），每一份的工作量有大有小，但是它们并没有高低之分，属于同一层级的划分。第二个例子则包含了水平划分：putElephant2Fridge函数和开门、放大象、关门三个函数很明显不在一个层次上。
 
-“一”其实是有“层次”之分的，对于同一个层次的内容进行垂直切割，不同层次的内容进行水平切割。
-
-- 垂直：第一个例子中的画分为四个模块，每个模块可能工作量有大有小，但是他们并没有高低之分；以及第二个例子中的开门，放大象和关门，也是同一个层次划分出来的一；
-
-- 水平：第二个例子中的putElephant2Fridge函数也是一个“一”，但它明显和开门，放大象和关门不在一个层次上，它是通过水平方式切出来的一个“一”；
-
-  
-
-  如果拿中国的行政划分来举例，省和市则是水平分割出来的两个概念，而眉山市和绵阳市则是垂直切割出来的两个概念。
+如果拿中国的行政划分来举例，眉山市和绵阳市是垂直切割出来的两个平级概念，而四川省和绵阳市则是水平分割出来的不同层级的概念。
 
 // TODO 看是否上一张图
 
@@ -204,28 +202,164 @@ public void putElephant2Fridge() {
 - 一篇复杂的论文，可以分为若干章，每一章再分为若干节，每一节又分为若干段，再由最基本的一句话，一个字组成；
 这种金字塔式的递归划分方式主宰着整个人类社会：公司的组织结构，数字（个十百千万），时间（秒分时天月年）都是如此。
 
-“**一**”是一个相对的概念，可大可小；脱离了**层次**谈“**一**”毫无意义。
+这种通过水平和垂直分割出来的独立单元，便是我们的“一”；而这种水平和垂直的切割点便是我们要寻找的变化因子。寻找变化因子的过程，即单一职责原则最核心的内容：**拆解**。
 
-对于王健林来说，赚一个亿是一件小事；而对于一名家庭主妇而言，一日三餐却是每天最重要的三件大事；王健林和家庭主妇24小时都只能干一天的活，两个人仅仅是角色和层次不同而已。家庭主妇做的是具体的事，我们不能她干的是家务活就否定她做的不是一件事；王健林做的是一些决策和规划，虽然最终一个亿是由下面的基层员工挣来的，但我们也不能因此就否定这些决策和规划的重要性，更不能要求王健林到工厂去拧螺丝。
+### 什么是变化因子
+从上面已经列举过的一些例子中，可以看出，变化因子其实就是复用的边界：
+- 读复用的边界：一个函数包含两个变化因子A和B，那么当A和B发生变化时，都会影响到这一整个函数；如果根据变化因子将这个函数拆成两个函数甲和乙，让变化因子A只影响函数甲，变化因子B只影响函数乙，让变动影响的范围更小，便会起到很好的读复用效果。
 
-至此，我们应该能体会到单一职责原则所做的事情：**拆解**。
+当然，变化因子并不总是体现在一个函数中，有时候，仅仅体现为一个变量。比如下面这段代码：
 
-通过横向和纵向合理分割形成我们的金字塔，最终让每一层的每一个单元聚焦于一件事，而这种横向和纵向的切割点便是我们要寻找的变化因子。
+```
+    public long getChildNum(int n) {
+        long sum = 0;
+        // 获取它的所有孩子的子孙数量
+        for (int i = this.birthMonth; i <= Math.min(n, this.birthMonth + 12); i++) {
+            // some code ...
+        }
+        // 自己还活着，再+1
+        if (this.birthMonth + 12 > n) {
+            sum += 1;
+        }
+        // some code ...
+    }
+```
 
+这个函数是用来计算兔子有多少个子孙（包含它自己），我们不用太关心这段函数的逻辑，只需要注意里面有两个int常量12即可，它代表一只兔子的寿命。
+
+如果兔子的寿命可能经常会变，那么现在这段代码至少就有两个变化因子：
+
+1. 计算兔子子孙的逻辑本身
+2. 兔子的寿命
+这两者任一发生变化，都需要改动这个函数。如果按照变化因子进行拆分，至少应该先改成如下：
+
+```
+	// 在某处定义兔子的寿命常量LIFE
+    private static final int LIFE = 12;
+	
+    public long getChildNum(int n) {
+        long sum = 0;
+        // 获取它的所有孩子的子孙数量
+        for (int i = this.birthMonth; i <= Math.min(n, this.birthMonth + LIFE); i++) {
+            // some code ...
+        }
+        // 自己还活着，再+1
+        if (this.birthMonth + LIFE > n) {
+            sum += 1;
+        }
+        // some code ...
+    }
+```
+
+
+试想一下，当兔子的寿命从12个月变成24个月时，前者你必须到处寻找哪里用到了这个12，然后把每一个用到的地方将改成24，而且经常容易改漏；但后者只需要修改常量LIFE的赋值即可。
+
+- 写复用的边界
+下面这个函数，给服务器新增一个IP，逻辑其实很简单，就是先校验然后执行一条命令就结束了：
+
+```
+public boolean addIP(IPInfo ipInfo) {
+    // 校验IP信息
+    if (!IPUtil.isStrictIpv4(ipInfo.getIp())) {
+        throw new MyException("IP " + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
+    } else if (isIPExist(ipInfo.getIp())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SAVE_FLOATIP_ERROR_MESSAGE));
+    } else if (!ArrayUtil.contain(getDeviceList(), ipInfo.getNetworkInterface())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_NETWORK_INTERFACE)
+                + getText(LanguageResource.WEB_INTERFACE_ADMIN_IPDEVICE_STATUS_INVALID));
+    } else if (!IPUtil.isNetMask(ipInfo.getNetmask())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_NEW_NETMASK)
+                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
+    } else if (!IPUtil.isIpv4(ipInfo.getGateway())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_OLD_GATEWAY)
+                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
+    }
+
+    boolean isSuccess = CMDUtil.excuteCmd(SET_IP_CMD).isSuccess();
+    return isSuccess;
+}
+```
+
+仅仅只看这一段代码，我们其实可以说它只做了一件事，那就是新增IP，也可以说它只有一个变化因子，那就是新增IP的逻辑。
+但如果后面我们又增加了一个更新IP信息的功能：
+```
+public boolean updateIP(IPInfo ipInfo) {
+    // 校验IP信息
+    if (!IPUtil.isStrictIpv4(ipInfo.getIp())) {
+        throw new MyException("IP " + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
+    } else if (isIPExist(ipInfo.getIp())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SAVE_FLOATIP_ERROR_MESSAGE));
+    } else if (!ArrayUtil.contain(getDeviceList(), ipInfo.getNetworkInterface())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_NETWORK_INTERFACE)
+                + getText(LanguageResource.WEB_INTERFACE_ADMIN_IPDEVICE_STATUS_INVALID));
+    } else if (!IPUtil.isNetMask(ipInfo.getNetmask())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_NEW_NETMASK)
+                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
+    } else if (!IPUtil.isIpv4(ipInfo.getGateway())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_OLD_GATEWAY)
+                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
+    }
+
+    // some other code.
+    return true;
+}
+```
+
+我们发现，更新IP的新增IP的校验逻辑完全一模一样。此时我们很可能会改变我们的想法，我们会说之前的那个函数其实做了两件事，即有两个变化因子：一个是校验IP的逻辑，一个是执行新增IP的逻辑。
+
+我们的代码则可以改为：
+
+```
+public boolean addIP(IPInfo ipInfo) {
+    // 校验IP信息
+    checkIP(ipInfo);
+
+    boolean isSuccess = CMDUtil.excuteCmd(SET_IP_CMD).isSuccess();
+    return isSuccess;
+}
+
+public boolean updateIP(IPInfo ipInfo) {
+    // 校验IP信息
+    checkIP(ipInfo);
+
+    // some other code.
+    return true;
+}
+
+private static void checkIP(IPInfo ipInfo) {
+    if (!IPUtil.isStrictIpv4(ipInfo.getIp())) {
+        throw new MyException("IP " + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
+    } else if (isIPExist(ipInfo.getIp())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SAVE_FLOATIP_ERROR_MESSAGE));
+    } else if (!ArrayUtil.contain(getDeviceList(), ipInfo.getNetworkInterface())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_NETWORK_INTERFACE)
+                + getText(LanguageResource.WEB_INTERFACE_ADMIN_IPDEVICE_STATUS_INVALID));
+    } else if (!IPUtil.isNetMask(ipInfo.getNetmask())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_NEW_NETMASK)
+                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
+    } else if (!IPUtil.isIpv4(ipInfo.getGateway())) {
+        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_OLD_GATEWAY)
+                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
+    }
+}
+```
+这个例子除了说明变化因子有时就是写复用的边界外，还能看出一些问题：
+
+**一**和**变化因子**都是我们主观的一种定义，并没有绝对的对错之分。而且随着需求的变化，业务的扩张，我们对**一个变化因子**的理解也会跟着产生变化。（我们最初是可以认为addIP是满足单一职责原则的，但后面随着需求的增加，我们开始认为它不再满足单一职责原则）
 
 ### 如何寻找变化因子？
 
 按照单一职责原则的定义：当一个软件单元包含两个或两个以上的变化因子时，我们就需要拆分它。
 
-但实际情况是，很多时候我们并不是因为发现代码中有多个变化因子而去拆分一个软件单元，往往是因为一个软件单元太“大”了，我们被迫去拆分它：
+但实际情况是，很多时候我们并不是因为发现代码中有多个变化因子而去拆分一个软件单元，而是因为一个软件单元太“大”了，我们被迫去拆分它：
 
-比如一个服务的性能要求超过了单台服务器的硬件瓶颈、一个模块的代码规模已经大到无法由一个小型团队无法承接，又或者很多公司规定的一个类不能超过2000行，一个函数不能超过50行，等等。这些客观要求或规定，会逼迫我们不得不进行拆分。
+比如一个服务的性能要求超过了单台服务器的硬件瓶颈；一个模块的代码规模已经大到无法由一个小型团队承接；又或者很多公司规定的一个类不能超过2000行，一个函数不能超过50行等等。这些客观的规模限制或要求，会逼迫我们不得不进行拆分。
 
-久而久之，我们大多数人都养成了一种习惯：当一个函数比较小时，我们基本不会去管它；只有当它变得足够大时，我们才会被迫想办法去拆分它。
+久而久之，我们大多数人都养成了一种习惯：当一个函数比较小时，我们不会去管它；只有当它变得足够大时，我们才会被迫想办法将其进行拆分。
 
 可是“大小”从来都不是决定一个软件单元是否应该拆分的决定性因素。
 
-比如JDK中的HashMap中有如下一段代码：
+比如JDK中HashMap类的一段代码：
 
 ```
 final void removeTreeNode(HashMap<K,V> map, Node<K,V>[] tab,
@@ -327,7 +461,7 @@ final void removeTreeNode(HashMap<K,V> map, Node<K,V>[] tab,
 }
 ```
 
-这个函数有一百行左右，如果我们因为它超过了50行而强行拆开他，很可能不会有效果甚至有负面作用。试想一下如果我们将这个函数拆成了两个部分，此时因为某个需求需要变更这里的代码，我们是否可以做到只需要理解函数的前半部分或者后半部分就可以完成修改，实际上很难，因为整个函数上下文联系紧密，逻辑关系密切，将这个函数拆成两个部分只会让我们在读代码或者改代码时总是要跨越两个函数。
+这个函数有一百行之多，如果我们因为它超过了50行而强行拆开他，很可能会产生负面效果。试想一下如果我们将这个函数拆成了两个部分，此时因为某个需求需要变更这里的代码时，我们是否可以做到只需要理解函数的前半部分或者后半部分就可以完成修改。实际上很难，removeTreeNode整个函数上下文关系非常密切，逻辑也密不可分，将这个函数拆成两个部分只会让我们在读代码或者改代码时总是要跨越两个函数体。
 
 而下面这个函数，即使只有两行，我们却又不得不拆分：
 
@@ -335,218 +469,78 @@ final void removeTreeNode(HashMap<K,V> map, Node<K,V>[] tab,
 所以我们写下了如下代码：
 
 ```
-	/**
-	 * @param map 外部消息
-	 */
-    public static int getInnerMsgType(Map<String, String> map) {
-		// 获取到外部消息的消息码
-        int msgType = Integer.valueOf(map.get("MsgType"));
-		// 通过映射关系找到内部的消息码
-        return MSG_TYPE_MAP.containsKey(msgType) ? MSG_TYPE_MAP.get(msgType) : DEFAULT_MSG_TYPE;
-    }
+/**
+ * @param map 外部消息
+ */
+public static int getInnerMsgType(Map<String, String> map) {
+	// 获取到外部消息的消息码
+	int msgType = Integer.valueOf(map.get("MsgType"));
+	// 通过映射关系找到内部的消息码
+	return MSG_TYPE_MAP.containsKey(msgType) ? MSG_TYPE_MAP.get(msgType) : DEFAULT_MSG_TYPE;
+}
 ```
 
-但后来有一个业务调用处，也需要根据外部消息码找到内部消息码，此时它也想调用这个函数，发现没法直接使用，因为它拿到的原始数据就是一个int类型。
-如果要复用上面这段代码，它需要把代码改成如下：
+但后来有一处代码，也需要根据外部消息码找到内部消息码，但它拿到的原始数据就是一个int类型，此时如果要复用上面这段代码，我们需要把这里的代码改成如下：
 
 ```
-	int outMsgType = XXX;
-	
-	// 为了调用getInnerMsgType，不得不先封装成map再进行调用。
-	Map<String, String> map = new HashMap<>();
-	map.put("MsgType", outMsgType + "");
-	
-	int innerMsgType = getInnterMsgType(map);
-	...
+int outMsgType = XXX;
+
+// 为了调用getInnerMsgType，不得不先封装成map再进行调用。
+Map<String, String> map = new HashMap<>();
+map.put("MsgType", outMsgType + "");
+
+int innerMsgType = getInnterMsgType(map);
+...
 ```
 
-这种写法看起来就很愚蠢，正确的做法是拆解最开始的getInnerMsgType函数，因为它包含有两个变化因子，在最开始就应该写成这样:
+上面这种写法看起来就很不恰当，正确的做法应该是拆解getInnerMsgType函数，因为很明显getInnerMsgType函数包含了两个变化因子，在最开始就应该将它写成这样:
 
 ```
-    public static int getInnerMsgType(int outMsgType) {
-		// 从Map中获取外部消息码的代码则应该移到别处（此处仅为了说明，实际工作中建议删除这行代码，而不是注释掉。）
-		// int msgType = Integer.valueOf(map.get("MsgType"));
-		// 通过映射关系找到内部的消息码
-        return MSG_TYPE_MAP.containsKey(msgType) ? MSG_TYPE_MAP.get(msgType) : DEFAULT_MSG_TYPE;
-    }
+public static int getInnerMsgType(int outMsgType) {
+	// 从Map中获取外部消息码的代码则应该移到别处（此处仅为了说明，实际工作中建议删除这行代码，而不是注释掉。）
+	// int msgType = Integer.valueOf(map.get("MsgType"));
+	// 通过映射关系找到内部的消息码
+	return MSG_TYPE_MAP.containsKey(msgType) ? MSG_TYPE_MAP.get(msgType) : DEFAULT_MSG_TYPE;
+}
 ```
-
 
 可见，软件单元的大小和变化因子的个数并没有必然联系，换句话说，我们并不能无脑的根据“大小”来决定是否拆分。
-即使如此，但不得不说，这种简单粗暴的根据软件单元的大小来判断是否需要拆分的方式非常有效，而且暂时我从未见过与之相比更好的方式。原因如下：
-1. 一个大的软件单元在绝大部分情况下都包含了多个“变化因子”。上面的代码片段X这个反例，其实非常少见（只在一些算法函数中比较常见）：首先你要在JDK源码中找到一个一百行的函数本身就不容易，而且它还不能包含多个变化因子，则更是难上加难。
 
-2. 如果我们要求程序员以变化因子来拆分函数，你会发现这非常难以落地，因为不同程序员对变化因子的理解各不相同，而且大部分程序员其实都不能很好的理解变化因子；这种约束最后的结果就是跟没有约束一样，代码中到处都是一个个超大的函数和类。
-3. 尽管我们是根据“大”来判断是否来拆解，但是最终执行拆解动作时，实际上找的仍然是变化因子。比如：
+即使如此，但不得不说，这种简单粗暴的根据软件单元的大小来判断是否需要拆分的方式非常有效，而且目前为止我从未见过与之相比更好的方式。我想原因主要有以下几点：
+1. 一个大的软件单元在绝大部分情况下都包含了多个“变化因子”。代码片段X这种例子，其实非常少见（在JDK源码中找到一个一百行以上的函数本身就不容易，而且它还不能包含多个变化因子，则更是难上加难，笔者找了许久才找到这么一个例子），一般这种单一的大函数只在实现某些算法时较为常见。
+
+2. 如果我们要求程序员以变化因子来拆分函数，会发现这非常难以落地，因为不同程序员对变化因子的理解各不相同，而且大部分程序员其实都不能很好的理解变化因子；这种约束最后的结果就是跟没有约束一样，代码中到处都是一个个超大的函数和类。
+3. 尽管我们是根据“大”来判断是否需要拆解，但是最终执行拆解动作时，实际上找的仍然是变化因子。比如：
 ```
 TODO
 ```
 
-我们觉得这个函数超过了50行，领导要求我们拆成两个函数，我想应该没有人会拆成如下样子吧：
+我们觉得这个函数超过了50行，领导要求我们拆成两个函数，大概率拆分后的结果应该是：
+```
+TODO
+```
+
+应该不会有人拆成如下：
 
 ```
 TODO
 ```
 
-大概率拆分的函数如下：
-```
-TODO
-```
-也就是说，虽然我们拆机的动机是“太大了”，但具体执行时其实还是会去寻找变化因子进行拆分，最终的结果仍然是好的。
+也就是说，虽然我们拆机的直接动机是函数“太大了”，但具体执行时还是会去寻找变化因子进行拆分，这种被动寻找变化因子的结果仍然是好的。
 
-尽管根据软件单元“大小”来决策拆分是一个很好的方式，但对于我们个人而言，如果想更快的成长，我们就必须从这种被动拆解的思维转变为主动拆解。
+尽管根据软件单元“大小”来决策拆分是一个很好的方式，但对于我们个人而言，如果想更快的成长，我们必须具备一些主动拆解的思维。
 
-试想一下，如果有一天你写出来的代码天然就短小精炼易复用，即使偶尔有几个大函数也是因为确实不需要拆分，这难道不是一件很美好的事吗？（尽管一次性将代码写的几近完美几乎不太可能，但这并不妨碍它作为我们的追求。）
-主动拆解的思维，正是在写代码时提前识别到变化因子，并将不同的变化因子分开并集中到不同的软件单元中；而不是先流水线式的写完代码，然后发现函数太长了，再二次加工拆分一下；这两者之间有一道鸿沟。
+如果我们能在写代码时提前识别到一些变化因子，并将这些不同的变化因子拆分到不同的软件单元中，这和先流水线式的写完代码，然后发现函数太长了，再二次加工拆分一下这种方式有着天壤之别。笔者并不是建议在任何情况下我们都去提前识别变化因子，有些时候在需求并不明朗时，提前拆分可能不会有太好的效果；但大部分情况下我们工程中的很多代码都是非常明确可以进行拆分的，如果将这些代码进行了提前拆分，这样可以避免大量后期的返工。
+
+> 具备主动拆解思维的程序员，写出来的代码总是短小精悍，他们大多数人在写代码时第一步都不是直接写代码，而是先定义接口名、类名和函数名，然后再来填充具体的代码。
 
 
-那么，到底什么是变化因子。我相信从上面已经列举过的一些例子中，很多读者应该也有所体会，变化因子其实就是复用的边界。
-- 读复用的边界
-  一个函数包含两个变化因子A和B，那么当A和B发生变化时，都会影响到这一整个函数；如果根据变化因子将这个函数拆成两个函数甲和乙，让变化因子A只影响函数甲，变化因子B只影响函数乙，让变动影响的范围更小，便会起到很好的读复用效果。就像代码片段X冰箱装大象一样，一共拆成了四个函数。当然，变化因子并不总是体现在一个函数中，有时候，仅仅只是一个变量。比如下面这段代码：
 
-```
-    public long getChildNum(int n) {
-        long sum = 0;
-        // 获取它的所有孩子的子孙数量
-        for (int i = this.birthMonth; i <= Math.min(n, this.birthMonth + 12); i++) {
-            // some code ...
-        }
-        // 自己还活着，再+1
-        if (this.birthMonth + 12 > n) {
-            sum += 1;
-        }
-        // some code ...
-    }
-```
-
-这个函数是用来计算兔子有多少个子孙（包含它自己），我们不用太关心这段函数的逻辑，只需要注意里面有两个int常量12即可，它代表一只兔子的寿命。
-
-现在这段代码其实至少就有两个变化因子：
-
-1. 计算兔子子孙的逻辑本身
-2. 兔子的寿命
-这两者任一发生变化，都需要改动这个函数。如果按照变化因子进行拆分，至少应该先改成如下：
-
-```
-	// 在某处定义兔子的寿命常量LIFE
-    private static final int LIFE = 12;
-	
-    public long getChildNum(int n) {
-        long sum = 0;
-        // 获取它的所有孩子的子孙数量
-        for (int i = this.birthMonth; i <= Math.min(n, this.birthMonth + LIFE); i++) {
-            // some code ...
-        }
-        // 自己还活着，再+1
-        if (this.birthMonth + LIFE > n) {
-            sum += 1;
-        }
-        // some code ...
-    }
-```
-
-
-试想一下，当兔子的寿命从12个月变成24个月时，前者你还得到处寻找哪里用到了这个12，然后把每一个用到的地方将改成24，而且经常容易改漏；但后者只需要修改常量LIFE的赋值即可。
-
-- 写复用的边界
-  下面这个函数，给服务器新增一个IP，逻辑其实很简单，就是先校验然后执行一条命令就结束了：
-
-```
-public boolean addIP(IPInfo ipInfo) {
-    // 校验IP信息
-    if (!IPUtil.isStrictIpv4(ipInfo.getIp())) {
-        throw new MyException("IP " + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
-    } else if (isIPExist(ipInfo.getIp())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SAVE_FLOATIP_ERROR_MESSAGE));
-    } else if (!ArrayUtil.contain(getDeviceList(), ipInfo.getNetworkInterface())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_NETWORK_INTERFACE)
-                + getText(LanguageResource.WEB_INTERFACE_ADMIN_IPDEVICE_STATUS_INVALID));
-    } else if (!IPUtil.isNetMask(ipInfo.getNetmask())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_NEW_NETMASK)
-                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
-    } else if (!IPUtil.isIpv4(ipInfo.getGateway())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_OLD_GATEWAY)
-                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
-    }
-
-    boolean isSuccess = CMDUtil.excuteCmd(SET_IP_CMD).isSuccess();
-    return isSuccess;
-}
-```
-
-仅仅只看这一段代码，我们其实可以说它只做了一件事，那就是新增IP，也可以说它只有一个变化因子，那就是新增IP的逻辑。
-但如果后面我们又增加了一个更新IP信息的功能：
-```
-public boolean updateIP(IPInfo ipInfo) {
-    // 校验IP信息
-    if (!IPUtil.isStrictIpv4(ipInfo.getIp())) {
-        throw new MyException("IP " + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
-    } else if (isIPExist(ipInfo.getIp())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SAVE_FLOATIP_ERROR_MESSAGE));
-    } else if (!ArrayUtil.contain(getDeviceList(), ipInfo.getNetworkInterface())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_NETWORK_INTERFACE)
-                + getText(LanguageResource.WEB_INTERFACE_ADMIN_IPDEVICE_STATUS_INVALID));
-    } else if (!IPUtil.isNetMask(ipInfo.getNetmask())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_NEW_NETMASK)
-                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
-    } else if (!IPUtil.isIpv4(ipInfo.getGateway())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_OLD_GATEWAY)
-                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
-    }
-
-    // some other code.
-    return true;
-}
-```
-
-我们发现，更新IP的新增IP的校验逻辑完全一模一样。此时我们很可能会改变我们的想法，我们会说之前的那个函数其实做了两件事，即有两个变化因子：一个是校验IP的逻辑，一个是执行新增IP的逻辑。
-
-我们的代码也大概率改为：
-
-```
-public boolean addIP(IPInfo ipInfo) {
-    // 校验IP信息
-    checkIP(ipInfo);
-
-    boolean isSuccess = CMDUtil.excuteCmd(SET_IP_CMD).isSuccess();
-    return isSuccess;
-}
-
-public boolean updateIP(IPInfo ipInfo) {
-    // 校验IP信息
-    checkIP(ipInfo);
-
-    // some other code.
-    return true;
-}
-
-private static void checkIP(IPInfo ipInfo) {
-    if (!IPUtil.isStrictIpv4(ipInfo.getIp())) {
-        throw new MyException("IP " + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
-    } else if (isIPExist(ipInfo.getIp())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SAVE_FLOATIP_ERROR_MESSAGE));
-    } else if (!ArrayUtil.contain(getDeviceList(), ipInfo.getNetworkInterface())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_NETWORK_INTERFACE)
-                + getText(LanguageResource.WEB_INTERFACE_ADMIN_IPDEVICE_STATUS_INVALID));
-    } else if (!IPUtil.isNetMask(ipInfo.getNetmask())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_NEW_NETMASK)
-                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
-    } else if (!IPUtil.isIpv4(ipInfo.getGateway())) {
-        throw new MyException(getText(LanguageResource.WEB_INTERFACE_SCA_OLD_GATEWAY)
-                + getText(LanguageResource.WEB_INTERFACE_SCA_WRONG));
-    }
-}
-```
-这个例子除了说明变化因子有时就是写复用的边界外，还能看出一些问题：
-
-**一**和**变化因子**都是我们主观的一种定义，并没有绝对的对错之分。而且随着需求的变化，业务的扩张，我们对**一个变化因子**的理解也会跟着产生变化。（我们最初是可以认为addIP是满足单一职责原则的，但后面随着需求的增加，我们开始认为它不再满足单一职责原则）
 
 
 ### 单一职责原则的不完整
 
-我们再来回顾一下单一职责原则的定义：一个类应该只有一个变化因子。
-
-这其实是不完整的。
+单一职责原则的定义是：一个类应该只有一个变化因子。
 
 我们结合到我们的日常编码工作来说，即一块代码应该只会因为一个变化因子发生变化而变化。我们再来看上面的代码片段X，如果我将它改成如下：
 
@@ -569,30 +563,21 @@ private static void checkIP(IPInfo ipInfo) {
     }
 ```
 
-你会认为它违反单一职责原则吗？
-
-这段代码看起来就不顺眼，尽管我们很想说它不满足单一职责原则，但如果按照单一职责的定义来看，不得不说：它并没有！
+尽管我们很想说它有问题，但如果严格按照单一职责的定义来看，我们只能承认：它并没有！
 
 - getChildNum函数只有一个变化因子，即计算兔子子孙数量的逻辑；
 - LIFE_1这个变量也只有一个变化因子，就是兔子的寿命；
 - LIFE_2这个变量同样也只有一个变化因子，也是兔子的寿命；
 
-它完全满足单一职责原则的定义，一个软件单元只有一个变化因子。
+它完全满足单一职责原则的定义，一个软件单元只有一个变化因子；但一个软件单元只有一个变化因子，并不代表一个变化因子只会影响一个软件单元。而一个变化因子影响多个软件单元，意味着变化发生时，我们要在多个地方重复修改多次。
 
-一个孩子只有一个妈妈，但并不代表一个妈妈一定只有一个孩子；一个软件单元只有一个变化因子，并不代表一个变化因子只会影响一个软件单元。
-
-如果一个变化因子影响多个软件单元，意味着变化发生时，我们要在多个地方重复修改多次。
-
-所以，单一职责原则是不完整的，如果严谨一些，我们可以将它修改为：
-
-**一个软件单元应该只有一个变化因子；一个变化因子应该只影响一个软件单元。**
+这明显不合理，但从设计原则的角度看，我们竟然找不到它的任何缺点，它没有违反SOLID原则中的任何一项。
 
 
-
+### 单一职责原则的
 到此为止，我们已经讲完了单一职责原则中的所有概念。
 
-但实际要执行好单一职责原则却非常困难，就如代码片段X，我们为何就能如此确定addIP和updateIP的校验是一个变化因子呢？万一未来，updateIP校验的规则需要修改但addIP的校验规则又不需要修改该怎么办？
-一个代码新手很可能直接修改了checkIP方法，而导致addIP功能出现bug。
+但实际要执行好单一职责原则却非常困难，就如代码片段X，在没有明确未来需求时我们其实无法确定addIP和updateIP的校验就是同一个变化因子。如果未来有一天updateIP校验的规则需要修改但addIP的校验规则又不需要修改，很可能出现这种情况：一个代码新手直接修改了checkIP方法，而导致addIP功能出现bug。
 ```
 public boolean addIP(IPInfo ipInfo) {
     // 校验IP信息
@@ -617,9 +602,9 @@ private static void checkIP(IPInfo ipInfo) {
 }
 ```
 
-难道将checkIp分成两个就好了嘛，万一updateIP和addIP的校验规则始终都保持一致呢？这违背了：“一个变化因子应该只影响一个软件单元”，最终每次修改都需要修改两处。
-```
 
+
+```
 public boolean addIP(IPInfo ipInfo) {
     // 校验IP信息
     checkAddIP(ipInfo);
@@ -646,12 +631,12 @@ private static void checkUpdateIP(IPInfo ipInfo) {
 	...
 }
 ```
-
+难道将checkIp分成两个就好了嘛，万一updateIP和addIP的校验规则始终都保持一致呢？这违背了：“一个变化因子应该只影响一个软件单元”，最终每次修改都需要修改两处。
 当我们陷入这种两难的境地后，会发现单一职责原则的执行正确与否不仅仅与我们本身的能力和经验有关，还与我们对业务的掌握程度息息相关。
 
 “变化因子”这个概念已经注定我们不可能写出完全符合单一职责原则的代码，“变化”本身就是我们对未来的主观预测，即对未来业务将会如果发展，需求将会如何变化的一种提前评估；这种评估的正确性与我们对业务的理解非常相关，而且预估本身就一定存在偏差！
 
-这是一个客观事实，无法避免，我们能做的就是在这种变化中寻找平衡。就如bob大叔说过的一段话：
+这是一个客观事实，无法避免，我们能做的就是在这种变化中寻找平衡。就如bob大叔所说：
 
 **根本不存在充分分析这种东西，无论花多少时间试图去找出完美的软件结构，客户总是会引入一个变化破坏这个结构。这种情况是无法避免的，不存在完美的结构，只存在试图去平衡当前的代价和收益的结构。随着时间的过去，这些结构肯定会随着需求的改变而改变，管理这种变化的诀窍是尽可能的保持系统的简单灵活。**
 
